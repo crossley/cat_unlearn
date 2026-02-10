@@ -1,0 +1,841 @@
+import os
+import copy
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from matplotlib.lines import Line2D
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import seaborn as sns
+import pingouin as pg
+from util_func_dbm import *
+
+
+def load_data():
+
+    dir_data = "../data"
+
+    d_rec = []
+
+    for file in os.listdir(dir_data):
+
+        if file.endswith(".csv"):
+            d = pd.read_csv(os.path.join(dir_data, file))
+            d["phase"] = ["Learn"] * 300 + ["Intervention"] * 300 + ["Test"
+                                                                     ] * 299
+            d_rec.append(d)
+
+    d = pd.concat(d_rec, ignore_index=True)
+
+    d.groupby(["experiment", "condition"])["subject"].unique()
+    d.groupby(["experiment", "condition"])["subject"].nunique()
+
+    d.loc[d["cat"] == "A", "cat"] = 0
+    d.loc[d["cat"] == "B", "cat"] = 1
+    d.loc[d["resp"] == "A", "resp"] = 0
+    d.loc[d["resp"] == "B", "resp"] = 1
+    d["cat"] = d["cat"].astype(int)
+    d["resp"] = d["resp"].astype(int)
+    d["acc"] = d["cat"] == d["resp"]
+
+    print(d.groupby(["experiment", "condition"])["subject"].unique())
+    print(d.groupby(["experiment", "condition"])["subject"].nunique())
+
+    return d
+
+
+def make_fig_cat_struct():
+
+    d = load_data()
+
+    d = d[d["experiment"] == 1]
+    d = d[d["subject"].isin(d["subject"].unique()[0:2])]
+    d = d[["cat", "x", "y", "phase", "condition", "subject"]]
+    d = d.drop_duplicates()
+
+    # map condition names from relearn to Relearn, new_learn to New Learn
+    d["condition"] = d["condition"].map({
+        "relearn": "Relearn",
+        "new_learn": "New Learn"
+    })
+
+    fig = plt.figure(figsize=(8, 6))
+
+    # 9x9 grid; tweak wspace/hspace as desired
+    gs = gridspec.GridSpec(9, 9, figure=fig, wspace=0.75, hspace=0.5)
+
+    axx_learn = fig.add_subplot(gs[3:6, 0:3])
+    axx_intervention = fig.add_subplot(gs[3:6, 3:6])
+    axx_test_relearn = fig.add_subplot(gs[1:4, 6:9])
+    axx_test_newlearn = fig.add_subplot(gs[5:8, 6:9])
+
+    # ------------------------------------------------
+    # Plot Learn
+    sns.scatterplot(
+        data=d[d["phase"] == "Learn"][d["subject"] == d["subject"].unique()
+                                      [0]],
+        x="x",
+        y="y",
+        hue="cat",
+        legend=False,
+        ax=axx_learn,
+    )
+    axx_learn.set_title("Learn", fontsize=24)
+    axx_learn.set_xticks([])
+    axx_learn.set_yticks([])
+    axx_learn.set_xlabel("Spatial Frequency")
+    axx_learn.set_ylabel("Orientation")
+
+    # Plot Intervention
+    sns.scatterplot(
+        data=d[d["phase"] == "Learn"][d["subject"] == d["subject"].unique()
+                                      [1]],
+        x="x",
+        y="y",
+        hue="cat",
+        legend=False,
+        ax=axx_intervention,
+    )
+    axx_intervention.set_title("Intervention", fontsize=24)
+    axx_intervention.set_xticks([])
+    axx_intervention.set_yticks([])
+    axx_intervention.set_xlabel("")
+    axx_intervention.set_ylabel("")
+
+    # ------------------------------------------------
+    # Test – Relearn
+    dc_relearn = d[d["condition"] == "Relearn"].copy()
+    dcp_relearn = dc_relearn[dc_relearn["phase"] == "Test"].copy()
+
+    sns.scatterplot(
+        data=dcp_relearn,
+        x="x",
+        y="y",
+        hue="cat",
+        legend=False,
+        ax=axx_test_relearn,
+    )
+    axx_test_relearn.set_title("Relearn", fontsize=24)
+    axx_test_relearn.set_xticks([])
+    axx_test_relearn.set_yticks([])
+    axx_test_relearn.set_xlabel("")
+    axx_test_relearn.set_ylabel("")
+
+    # Test – New Learn
+    dc_newlearn = d[d["condition"] == "New Learn"].copy()
+    dcp_newlearn = dc_newlearn[dc_newlearn["phase"] == "Test"].copy()
+
+    sns.scatterplot(
+        data=dcp_newlearn,
+        x="x",
+        y="y",
+        hue="cat",
+        legend=False,
+        ax=axx_test_newlearn,
+    )
+    axx_test_newlearn.set_title(" New Learn", fontsize=24)
+    axx_test_newlearn.set_xticks([])
+    axx_test_newlearn.set_yticks([])
+    axx_test_newlearn.set_xlabel("")
+    axx_test_newlearn.set_ylabel("")
+
+    plt.savefig("../figures/fig_cat_struct_2.pdf", bbox_inches="tight")
+    plt.close()
+
+    fig, ax = plt.subplots(2, 3, figsize=(10, 6))
+    plt.subplots_adjust(hspace=0.4, wspace=0.4)
+
+    for i, cnd in enumerate(["Relearn", "New Learn"]):
+
+        dc = d[d["condition"] == cnd].copy()
+
+        for j, phs in enumerate(["Learn", "Intervention", "Test"]):
+
+            axx = ax[i, j]
+
+            dcp = dc[dc["phase"] == phs].copy()
+
+            sns.scatterplot(
+                data=dcp,
+                x="x",
+                y="y",
+                hue="cat",
+                # palette=["#FF0000", "#0000FF"],
+                alpha=0.5,
+                legend=False,
+                ax=axx,
+            )
+            axx.set_title(f"{cnd} - {phs}")
+            axx.set_xticks([])
+            axx.set_yticks([])
+            axx.set_xlabel("Spatial Frequency")
+            axx.set_ylabel("Orientation")
+
+    plt.savefig("../figures/fig_cat_struct.pdf", bbox_inches="tight")
+    plt.close()
+
+
+def make_fig_acc_all():
+
+    d = load_data()
+    dp = d.copy()
+
+    # d = d[d['experiment'] == 1].copy()
+
+    # plot histogram of accuracy per subject in the final 100 trials of learning
+    d_last_100 = d[(d["trial"] < 300) & (d["trial"] > 200)].copy()
+    d_last_100 = d_last_100.groupby(["experiment", "condition",
+                                     "subject"])["acc"].mean().reset_index()
+
+    # fig, ax = plt.subplots(figsize=(8, 6))
+    # sns.histplot(data=d_last_100,
+    #              x="acc",
+    #              bins=np.arange(0, 1.05, 0.01)
+    #              )
+    # plt.show()
+
+    # define exc_subs to be numpy array of subjects that did not reach greater than 65% accuracy
+    # during the last 100 trials of learning
+    dd = d[(d["trial"] < 300) & (d["trial"] > 200)].copy()
+    dd = dd.groupby(["experiment", "condition",
+                     "subject"])["acc"].mean().reset_index()
+    exc_subs = dd[dd["acc"] < 0.6]["subject"].unique()
+
+    # print number of excluded subjects
+    for exp in [1, 2]:
+        for cnd in ["relearn", "new_learn"]:
+            n_exc = len(dd[(dd["experiment"] == exp) & (dd["condition"] == cnd)
+                           & (dd["acc"] < 0.6)])
+            print(
+                f"Experiment {exp}, Condition {cnd}: {n_exc} excluded subjects"
+            )
+
+    d = d[~d["subject"].isin(exc_subs)]
+
+    # aggregate into blocks and calculate mean accuracy
+    block_size = 25
+    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+    d["condition"] = d["condition"].astype("category")
+    d = d.groupby(["experiment", "condition", "subject", "phase", "block"],
+                  observed=True)["acc"].mean().reset_index()
+    d1 = d[d["experiment"] == 1].copy()
+    d2 = d[d["experiment"] == 2].copy()
+
+    fig, ax = plt.subplots(1, 2, squeeze=False, figsize=(12, 6))
+
+    sns.lineplot(data=d1,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 style="phase",
+                 ax=ax[0, 0])
+    sns.lineplot(data=d2,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 style="phase",
+                 ax=ax[0, 1])
+    ax[0, 0].set_title("Experiment 1")
+    ax[0, 1].set_title("Experiment 2")
+
+    for axx in ax.flatten():
+        axx.set_xlabel("Block")
+        axx.set_ylabel("Accuracy")
+        axx.set_ylim(.4, .9)
+        axx.legend(loc="lower left", ncol=2)
+
+    plt.tight_layout()
+    plt.savefig("../figures/subjects_accuracy_all.pdf")
+    plt.close()
+
+    # NOTE: show Experiment 1: by phase
+    # set default color pallete
+    fig, ax = plt.subplots(1, 1, squeeze=False, figsize=(8, 6))
+    d1["condition"] = d1["condition"].map({
+        "relearn": "Relearn",
+        "new_learn": "New Learn"
+    })
+    d1["condition"] = pd.Categorical(d1["condition"],
+                                     categories=["Relearn", "New Learn"],
+                                     ordered=True)
+    d1["block"] = d1["block"] + 1
+    sns.lineplot(data=d1,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 marker="o",
+                 ax=ax[0, 0])
+    ax[0, 0].axvline(x=12.5, color='gray', linestyle='--')
+    ax[0, 0].axvline(x=24.5, color='gray', linestyle='--')
+    ax[0, 0].set_title(
+        r"Experiment 1: Random Feedback Intervention with $\bf{Verbal~Instruction}$",
+        fontsize=14)
+    ax[0, 0].set_xlabel("Block", fontsize=14)
+    ax[0, 0].set_ylabel("Accuracy", fontsize=14)
+    ax[0, 0].set_xlim(0, 37)
+    ax[0, 0].set_ylim(0.3, 1.1)
+    ax[0, 0].set_yticks(np.arange(0.2, 1.1, 0.2))
+    ax[0, 0].get_legend().set_title("")
+    ax[0, 0].legend(loc='upper left')
+    ax_inset_1 = ax[0, 0].inset_axes([0.1, 0.05, 0.15, 0.2])
+    ax_inset_2 = ax[0, 0].inset_axes([0.425, 0.05, 0.15, 0.2])
+    ax_inset_3 = ax[0, 0].inset_axes([0.76, 0.74, 0.15, 0.2])
+    ax_inset_4 = ax[0, 0].inset_axes([0.76, 0.05, 0.15, 0.2])
+    dp["condition"] = dp["condition"].map({
+        "relearn": "Relearn",
+        "new_learn": "New Learn"
+    })
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[0:300, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_1,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[300:600, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_2,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[600:899, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_3,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "New Learn"].iloc[600:899, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_4,
+                    legend=False)
+    ax_inset_1.set_title("Learn", fontsize=14)
+    ax_inset_2.set_title("Intervention", fontsize=14)
+    ax_inset_3.set_title("Test: Relearn", fontsize=14)
+    ax_inset_4.set_title("Test: New Learn", fontsize=14)
+    [
+        x.set_xticks([])
+        for x in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        y.set_yticks([])
+        for y in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        x.set_xlabel("")
+        for x in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        y.set_ylabel("")
+        for y in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    ax_inset_3.spines['top'].set_color('C0')
+    ax_inset_3.spines['bottom'].set_color('C0')
+    ax_inset_3.spines['left'].set_color('C0')
+    ax_inset_3.spines['right'].set_color('C0')
+    ax_inset_3.spines['top'].set_linewidth(2)
+    ax_inset_3.spines['bottom'].set_linewidth(2)
+    ax_inset_3.spines['left'].set_linewidth(2)
+    ax_inset_3.spines['right'].set_linewidth(2)
+    ax_inset_4.spines['top'].set_color('C1')
+    ax_inset_4.spines['bottom'].set_color('C1')
+    ax_inset_4.spines['left'].set_color('C1')
+    ax_inset_4.spines['right'].set_color('C1')
+    ax_inset_4.spines['top'].set_linewidth(2)
+    ax_inset_4.spines['bottom'].set_linewidth(2)
+    ax_inset_4.spines['left'].set_linewidth(2)
+    ax_inset_4.spines['right'].set_linewidth(2)
+    plt.tight_layout()
+    plt.savefig("../figures/subjects_accuracy_talk_exp_1.pdf")
+    plt.close()
+
+    # NOTE: show Experiment 2: by phase
+    # set default color pallete
+    fig, ax = plt.subplots(1, 1, squeeze=False, figsize=(8, 6))
+    d2["condition"] = d2["condition"].map({
+        "relearn": "Relearn",
+        "new_learn": "New Learn"
+    })
+    d2["condition"] = pd.Categorical(d2["condition"],
+                                     categories=["Relearn", "New Learn"],
+                                     ordered=True)
+    d2["block"] = d2["block"] + 1
+    sns.lineplot(data=d2,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 marker="o",
+                 ax=ax[0, 0])
+    ax[0, 0].axvline(x=12.5, color='gray', linestyle='--')
+    ax[0, 0].axvline(x=24.5, color='gray', linestyle='--')
+    ax[0, 0].set_title(
+        r"Experiment 2: Mixed Feedback Intervention with $\bf{Verbal~Instruction}$",
+        fontsize=14)
+    ax[0, 0].set_xlabel("Block", fontsize=14)
+    ax[0, 0].set_ylabel("Accuracy", fontsize=14)
+    ax[0, 0].set_xlim(0, 37)
+    ax[0, 0].set_ylim(0.3, 1.1)
+    ax[0, 0].set_yticks(np.arange(0.2, 1.1, 0.2))
+    ax[0, 0].get_legend().set_title("")
+    ax[0, 0].legend(loc='upper left')
+    ax_inset_1 = ax[0, 0].inset_axes([0.1, 0.05, 0.15, 0.2])
+    ax_inset_2 = ax[0, 0].inset_axes([0.425, 0.05, 0.15, 0.2])
+    ax_inset_3 = ax[0, 0].inset_axes([0.76, 0.74, 0.15, 0.2])
+    ax_inset_4 = ax[0, 0].inset_axes([0.76, 0.05, 0.15, 0.2])
+    # dp["condition"] = dp["condition"].map( {"relearn": "Relearn", "new_learn": "New Learn"})
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[0:300, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_1,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[300:600, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_2,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "Relearn"].iloc[600:899, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_3,
+                    legend=False)
+    sns.scatterplot(data=dp[dp["condition"] == "New Learn"].iloc[600:899, :],
+                    x="x",
+                    y="y",
+                    hue="cat",
+                    ax=ax_inset_4,
+                    legend=False)
+    ax_inset_1.set_title("Learn", fontsize=14)
+    ax_inset_2.set_title("Intervention", fontsize=14)
+    ax_inset_3.set_title("Test: Relearn", fontsize=14)
+    ax_inset_4.set_title("Test: New Learn", fontsize=14)
+    [
+        x.set_xticks([])
+        for x in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        y.set_yticks([])
+        for y in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        x.set_xlabel("")
+        for x in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    [
+        y.set_ylabel("")
+        for y in [ax_inset_1, ax_inset_2, ax_inset_3, ax_inset_4]
+    ]
+    ax_inset_3.spines['top'].set_color('C0')
+    ax_inset_3.spines['bottom'].set_color('C0')
+    ax_inset_3.spines['left'].set_color('C0')
+    ax_inset_3.spines['right'].set_color('C0')
+    ax_inset_3.spines['top'].set_linewidth(2)
+    ax_inset_3.spines['bottom'].set_linewidth(2)
+    ax_inset_3.spines['left'].set_linewidth(2)
+    ax_inset_3.spines['right'].set_linewidth(2)
+    ax_inset_4.spines['top'].set_color('C1')
+    ax_inset_4.spines['bottom'].set_color('C1')
+    ax_inset_4.spines['left'].set_color('C1')
+    ax_inset_4.spines['right'].set_color('C1')
+    ax_inset_4.spines['top'].set_linewidth(2)
+    ax_inset_4.spines['bottom'].set_linewidth(2)
+    ax_inset_4.spines['left'].set_linewidth(2)
+    ax_inset_4.spines['right'].set_linewidth(2)
+    plt.tight_layout()
+    plt.savefig("../figures/subjects_accuracy_talk_exp_2.pdf")
+    plt.close()
+
+
+def fit_dbm():
+
+    d = load_data()
+
+    block_size = 100
+    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+
+    # NOTE: focus on the last learning block and the test blocks
+    d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
+
+    d = d.sort_values(["experiment", "condition", "subject", "block", "trial"])
+
+    models = [
+        nll_unix,
+        nll_unix,
+        nll_uniy,
+        nll_uniy,
+        nll_glc,
+        nll_glc,
+        #    nll_gcc_eq,
+        #    nll_gcc_eq,
+        #    nll_gcc_eq,
+        #    nll_gcc_eq,
+    ]
+    side = [0, 1, 0, 1, 0, 1, 0, 1, 2, 3]
+    k = [2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+    n = block_size
+    model_names = [
+        "nll_unix_0",
+        "nll_unix_1",
+        "nll_uniy_0",
+        "nll_uniy_1",
+        "nll_glc_0",
+        "nll_glc_1",
+        #    "nll_gcc_eq_0",
+        #    "nll_gcc_eq_1",
+        #    "nll_gcc_eq_2",
+        #    "nll_gcc_eq_3",
+    ]
+
+    dbm = (d.groupby(["experiment", "condition", "subject",
+                      "block"]).apply(fit_dbm, models, side, k, n,
+                                      model_names).reset_index())
+
+    dbm.to_csv("../dbm_fits/dbm_results.csv")
+
+
+def make_fig_acc_proc():
+
+    if os.path.exists("../dbm_fits/dbm_results.csv"):
+        dbm = pd.read_csv("../dbm_fits/dbm_results.csv")
+    else:
+        print("DBM results file not found. Please run fit_dbm() first.")
+
+    def assign_best_model(x):
+        model = x["model"].to_numpy()
+        bic = x["bic"].to_numpy()
+        best_model = np.unique(model[bic == bic.min()])[0]
+        x["best_model"] = best_model
+        return x
+
+    dbm = dbm.groupby(["experiment", "condition", "subject",
+                       "block"]).apply(assign_best_model)
+
+    d = load_data()
+    dp = d.copy()
+
+    # define exc_subs to be numpy array of subjects that did not reach greater than 65% accuracy
+    # during the last 100 trials of learning
+    dd = d[(d["trial"] < 300) & (d["trial"] > 200)].copy()
+    dd = dd.groupby(["experiment", "condition",
+                     "subject"])["acc"].mean().reset_index()
+    exc_subs = dd[dd["acc"] < 0.6]["subject"].unique()
+
+    # exclude subjects that did not reach greater than 65% accuracy
+    dbm = dbm[~dbm["subject"].isin(exc_subs)]
+
+    dd = dbm.loc[dbm["model"] == dbm["best_model"]]
+
+    ddd = dd[["experiment", "condition", "subject", "block",
+              "best_model"]].drop_duplicates()
+    ddd["best_model_class"] = ddd["best_model"].str.split("_").str[1]
+    ddd.loc[ddd["best_model_class"] != "glc",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model_class"] == "glc",
+            "best_model_class"] = "procedural"
+    ddd["best_model_class"] = ddd["best_model_class"].astype("category")
+    ddd = ddd.reset_index(drop=True)
+
+    def get_best_model_class_2(x):
+        if np.isin("rule-based", x["best_model_class"].to_numpy()):
+            x["best_model_class_2"] = "rule-based"
+        else:
+            x["best_model_class_2"] = "procedural"
+
+        return x
+
+    ddd = ddd.groupby(["experiment", "condition", "block", "subject"
+                       ]).apply(get_best_model_class_2).reset_index(drop=True)
+    ddd["best_model_class_2"] = ddd["best_model_class_2"].astype("category")
+    ddd['block'] = ddd['block'].astype("category")
+
+    # NOTE: examine only procedural subjects
+    proc_subs_learn = ddd[(ddd["best_model_class_2"] == "procedural")
+                          & (ddd["block"] == 2)]["subject"].unique()
+    proc_subs_test = ddd[(ddd["best_model_class_2"] == "procedural")
+                         & (ddd["block"] == 6)]["subject"].unique()
+    proc_proc_subs = np.intersect1d(proc_subs_learn, proc_subs_test)
+
+    d = d[d["subject"].isin(proc_proc_subs)]
+
+    # aggregate into blocks and calculate mean accuracy
+    block_size = 25
+    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+    d["condition"] = d["condition"].astype("category")
+    d = d.groupby(["experiment", "condition", "subject", "phase", "block"],
+                  observed=True)["acc"].mean().reset_index()
+
+    d1 = d[d["experiment"] == 1]
+    d2 = d[d["experiment"] == 2]
+
+    fig, ax = plt.subplots(1, 2, squeeze=False, figsize=(12, 6))
+    sns.lineplot(data=d1,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 style="phase",
+                 ax=ax[0, 0])
+    sns.lineplot(data=d2,
+                 x="block",
+                 y="acc",
+                 hue="condition",
+                 style="phase",
+                 ax=ax[0, 1])
+    ax[0, 0].set_title("Experiment 1")
+    ax[0, 1].set_title("Experiment 2")
+    for axx in ax.flatten():
+        axx.set_xlabel("Block")
+        axx.set_ylabel("Accuracy")
+        axx.set_ylim(.3, 1)
+        axx.legend(loc="lower left", ncol=2)
+    plt.tight_layout()
+    plt.savefig("../figures/subjects_accuracy_proc.pdf")
+    plt.close()
+
+
+def make_fig_dbm():
+
+    if os.path.exists("../dbm_fits/dbm_results.csv"):
+        dbm = pd.read_csv("../dbm_fits/dbm_results.csv")
+    else:
+        print("DBM results file not found. Please run fit_dbm() first.")
+
+    def assign_best_model(x):
+        model = x["model"].to_numpy()
+        bic = x["bic"].to_numpy()
+        best_model = np.unique(model[bic == bic.min()])[0]
+        x["best_model"] = best_model
+        return x
+
+    dbm = dbm.groupby(["experiment", "condition", "subject",
+                       "block"]).apply(assign_best_model)
+
+    d = load_data()
+
+    # define exc_subs to be numpy array of subjects that did not reach greater than 65% accuracy
+    # during the last 100 trials of learning
+    dd = d[(d["trial"] < 300) & (d["trial"] > 200)].copy()
+    dd = dd.groupby(["experiment", "condition",
+                     "subject"])["acc"].mean().reset_index()
+    exc_subs = dd[dd["acc"] < 0.6]["subject"].unique()
+
+    # exclude subjects that did not reach greater than 65% accuracy
+    dbm = dbm[~dbm["subject"].isin(exc_subs)]
+
+    dd = dbm.loc[dbm["model"] == dbm["best_model"]]
+
+    ddd = dd[["experiment", "condition", "subject", "block",
+              "best_model"]].drop_duplicates()
+    ddd["best_model_class"] = ddd["best_model"].str.split("_").str[1]
+    ddd.loc[ddd["best_model_class"] != "glc",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model_class"] == "glc",
+            "best_model_class"] = "procedural"
+    ddd["best_model_class"] = ddd["best_model_class"].astype("category")
+    ddd = ddd.reset_index(drop=True)
+
+    def get_best_model_class_2(x):
+        if np.isin("rule-based", x["best_model_class"].to_numpy()):
+            x["best_model_class_2"] = "rule-based"
+        else:
+            x["best_model_class_2"] = "procedural"
+
+        return x
+
+    ddd = ddd.groupby(["experiment", "condition", "block", "subject"
+                       ]).apply(get_best_model_class_2).reset_index(drop=True)
+    ddd["best_model_class_2"] = ddd["best_model_class_2"].astype("category")
+    ddd['block'] = ddd['block'].astype("category")
+
+    # TODO: Clean up plot code etc
+    fig, ax = plt.subplots(2, 2, squeeze=False, figsize=(8, 6))
+
+    CLASS_ORDER = ["procedural", "rule-based"]
+
+    def block_cross_counts(ddd, experiment, condition, b_y=2, b_x=6):
+        d_y = ddd[(ddd["experiment"] == experiment)
+                  & (ddd["condition"] == condition) & (ddd["block"] == b_y)][[
+                      "subject", "best_model_class_2"
+                  ]].rename(columns={"best_model_class_2": f"b{b_y}"})
+        d_x = ddd[(ddd["experiment"] == experiment)
+                  & (ddd["condition"] == condition) & (ddd["block"] == b_x)][[
+                      "subject", "best_model_class_2"
+                  ]].rename(columns={"best_model_class_2": f"b{b_x}"})
+
+        # only subjects present in both blocks
+        both = pd.merge(d_y, d_x, on="subject", how="inner")
+        if both.empty:
+            return pd.DataFrame(0, index=CLASS_ORDER, columns=CLASS_ORDER)
+
+        # enforce ordering
+        both[f"b{b_y}"] = pd.Categorical(both[f"b{b_y}"],
+                                         categories=CLASS_ORDER)
+        both[f"b{b_x}"] = pd.Categorical(both[f"b{b_x}"],
+                                         categories=CLASS_ORDER)
+
+        ct = pd.crosstab(both[f"b{b_y}"],
+                         both[f"b{b_x}"]).reindex(index=CLASS_ORDER,
+                                                  columns=CLASS_ORDER,
+                                                  fill_value=0)
+        return ct
+
+    def draw_heatmap(ax, counts, title, xlabel="Block 6", ylabel="Block 2"):
+        im = ax.imshow(counts.values, aspect="equal", cmap="Blues")
+        # ticks & labels
+        ax.set_xticks(range(len(counts.columns)))
+        ax.set_yticks(range(len(counts.index)))
+        ax.set_xticklabels(counts.columns, rotation=0, fontsize=12)
+        ax.set_yticklabels(counts.index, rotation=0, fontsize=12)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+
+        # annotate cell counts
+        for i in range(counts.shape[0]):
+            for j in range(counts.shape[1]):
+                ax.text(j, i, str(counts.iat[i, j]), ha="center", va="center")
+
+        # add a small colorbar for this axes
+        # fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    # (row, col, experiment, condition, title)
+    panels = [
+        (0, 0, 1, "relearn", "Exp 1 — Relearn"),
+        (0, 1, 1, "new_learn", "Exp 1 — New Learn"),
+        (1, 0, 2, "relearn", "Exp 2 — Relearn"),
+        (1, 1, 2, "new_learn", "Exp 2 — New Learn"),
+    ]
+
+    for r, c, exp, cond, title in panels:
+        counts = block_cross_counts(ddd, exp, cond, b_y=2, b_x=6)
+        draw_heatmap(ax[r, c], counts, title)
+
+    # for all axes make x label "Test" and ylabel "Train"
+    for axx in ax.flatten():
+        axx.set_xlabel("Learn", fontsize=14)
+        axx.set_ylabel("Train", fontsize=14)
+
+    fig.tight_layout()
+    plt.savefig("../figures/best_model_class_heatmap.pdf")
+    plt.close()
+
+
+def make_fig_dbm_state():
+
+    def get_posterior_diff(exp1_success,
+                           exp1_total,
+                           exp2_success,
+                           exp2_total,
+                           samples=100000):
+        theta1 = np.random.beta(exp1_success + 1,
+                                exp1_total - exp1_success + 1, samples)
+        theta2 = np.random.beta(exp2_success + 1,
+                                exp2_total - exp2_success + 1, samples)
+        delta = theta1 - theta2
+        return theta1, theta2, delta
+
+    def plot_bayesian_comparison(theta1, theta2, delta, row, axs,
+                                 condition_label):
+        ci = np.percentile(delta, [2.5, 97.5])
+        prob_exp1_greater = (delta > 0).mean()
+
+        axs[row, 0].hist(theta1, bins=100, color='gray', density=True)
+        axs[row, 0].set_title(
+            f'Exp 1 ({condition_label})', fontsize=16)
+        axs[row, 0].set_xlabel('θ₁', fontsize=14)
+        axs[row, 0].set_ylabel('Density', fontsize=14)
+
+        axs[row, 1].hist(theta2, bins=100, color='gray', density=True)
+        axs[row, 1].set_title( f'Exp 2 ({condition_label})', fontsize=16)
+        axs[row, 1].set_xlabel('θ₂', fontsize=14)
+        axs[row, 1].set_ylabel('Density', fontsize=14)
+
+        axs[row, 2].hist(delta, bins=100, color='gray', density=True)
+        axs[row, 2].axvline(0, color='black', linestyle='--', label='Δ = 0')
+        axs[row, 2].axvline(ci[0], color='red', linestyle=':', label='95% CI')
+        axs[row, 2].axvline(ci[1], color='red', linestyle=':')
+        axs[row, 2].set_title( f'Exp 1 − Exp 2 ({condition_label})', fontsize=16)
+        axs[row, 2].set_xlabel('Δ (θ₁ - θ₂)', fontsize=14)
+        axs[row, 2].set_ylabel('Density', fontsize=14)
+        axs[row, 2].legend()
+
+        print(
+            f"{condition_label} — 95% CI for Δ (Exp 1 − Exp 2): {ci[0]:.3f} to {ci[1]:.3f}"
+        )
+        print(f"{condition_label} — P(θ₁ > θ₂) = {prob_exp1_greater:.3f}")
+
+    # Posterior samples
+    theta1_relearn, theta2_relearn, delta_relearn = get_posterior_diff(
+        12, 13, 10, 12)
+    theta1_new, theta2_new, delta_new = get_posterior_diff(5, 16, 5, 13)
+
+    # Cross-condition comparisons within experiments
+    delta_exp1 = theta1_relearn - theta1_new
+    delta_exp2 = theta2_relearn - theta2_new
+
+    # Credible intervals and probabilities
+    ci_exp1 = np.percentile(delta_exp1, [2.5, 97.5])
+    ci_exp2 = np.percentile(delta_exp2, [2.5, 97.5])
+    prob_exp1 = (delta_exp1 > 0).mean()
+    prob_exp2 = (delta_exp2 > 0).mean()
+
+    # Create the figure grid
+    fig, axs = plt.subplots(3, 3, figsize=(15, 8))
+    plt.subplots_adjust(hspace=0.75, wspace=0.4)
+
+    # Row 1: Relearn condition
+    plot_bayesian_comparison(theta1_relearn,
+                             theta2_relearn,
+                             delta_relearn,
+                             row=0,
+                             axs=axs,
+                             condition_label='Relearn')
+
+    # Row 2: New Learn condition
+    plot_bayesian_comparison(theta1_new,
+                             theta2_new,
+                             delta_new,
+                             row=1,
+                             axs=axs,
+                             condition_label='New Learn')
+
+    # Row 3: Relearn − New Learn within each experiment
+    axs[2, 0].hist(delta_exp1, bins=100, color='gray', density=True)
+    axs[2, 0].axvline(0, color='black', linestyle='--')
+    axs[2, 0].axvline(ci_exp1[0], color='red', linestyle=':')
+    axs[2, 0].axvline(ci_exp1[1], color='red', linestyle=':')
+    axs[2, 0].set_title( 'Exp 1: (Relearn − New Learn)', fontsize=16)
+    axs[2, 0].set_xlabel('$\Delta (θ_{Relearn} - θ_{New Learn})$', fontsize=14)
+    axs[2, 0].set_ylabel('Density', fontsize=14)
+
+    axs[2, 1].hist(delta_exp2, bins=100, color='gray', density=True)
+    axs[2, 1].axvline(0, color='black', linestyle='--')
+    axs[2, 1].axvline(ci_exp2[0], color='red', linestyle=':')
+    axs[2, 1].axvline(ci_exp2[1], color='red', linestyle=':')
+    axs[2, 1].set_title( 'Exp 2: (Relearn − New Learn)', fontsize=16)
+    axs[2, 1].set_xlabel('$\Delta (θ_{Relearn} - θ_{New Learn})$', fontsize=14)
+    axs[2, 1].set_ylabel('Density', fontsize=14)
+
+    axs[2, 2].axis('off')  # Empty final cell
+
+    print(
+        f"Exp 1 — Relearn − New Learn: 95% CI = {ci_exp1[0]:.3f} to {ci_exp1[1]:.3f}, P(Δ > 0) = {prob_exp1:.3f}"
+    )
+    print(
+        f"Exp 2 — Relearn − New Learn: 95% CI = {ci_exp2[0]:.3f} to {ci_exp2[1]:.3f}, P(Δ > 0) = {prob_exp2:.3f}"
+    )
+
+    plt.savefig("../figures/bayesian_comparison.pdf")
+    plt.close()
+
+
+if __name__ == "__main__":
+
+    sns.set_palette("colorblind")
+
+    # make_fig_cat_struct()
+    # make_fig_acc_all()
+    # make_fig_acc_proc()
+    # make_fig_dbm()
+    make_fig_dbm_state()
