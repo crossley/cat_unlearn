@@ -1,3 +1,36 @@
+"""
+Main analysis script for: "Memory masking vs overwriting in procedural categorization" (in preparation).
+
+What this script does
+---------------------
+1) Loads trial-level CSV files from ../data/ and concatenates them.
+2) Adds a 'phase' label to each trial (Learn / Intervention / Test).
+3) Recodes categorical labels and responses from {'A','B'} to {0,1} and computes accuracy.
+4) Produces descriptive figures:
+   - Category structure / stimulus-space plots (Learn/Intervention/Test)
+   - Subject accuracy trajectories across blocks (optionally restricted to subsets)
+5) Fits decision-bound models (DBM) to selected blocks using maximum-likelihood fits:
+   - Unidimensional bounds on x or y
+   - General linear classifier (GLC)
+   - (Optional) conjunctive classifier variants (currently commented out)
+   Model fitting is performed via differential evolution, and model selection uses BIC.
+6) Summarizes model class transitions (procedural vs rule-based) between blocks and
+   produces visual summaries (heatmaps) and a simple Bayesian comparison plot.
+
+Assumptions / implementation notes
+----------------------------------
+- Phase labeling assumes each subject file contains 899 rows in the order:
+    Learn (300 trials) + Intervention (300 trials) + Test (299 trials).
+  If trial counts or ordering change, update the 'phase' assignment in load_data().
+- Accuracy exclusion: subjects are excluded if mean accuracy in learning trials 201–299
+  (i.e., last 100 of Learn) is < 0.60. (Threshold is currently hard-coded.)
+- Block definitions are based on row order within each subject × condition:
+    * For accuracy plots: block_size = 25
+    * For DBM fits: block_size = 100
+  These are analysis choices and can be changed, but update figure annotations accordingly.
+- DBM fits rescale x and y to [0,100] within each fitting chunk to standardize bounds.
+"""
+
 import os
 import copy
 import numpy as np
@@ -831,11 +864,24 @@ def make_fig_dbm_state():
 
 
 if __name__ == "__main__":
-
+    # Choose which analysis outputs to generate.
+    # Most functions write figures to ../figures/ and/or write DBM fit tables to ../dbm_fits/.
     sns.set_palette("colorblind")
 
+    # Descriptive task/stimulus visualizations:
     # make_fig_cat_struct()
+
+    # Learning curves for all included subjects (with exclusion rule applied):
     # make_fig_acc_all()
+
+    # Learning curves restricted to "procedural → procedural" subjects as defined by DBM classification:
     # make_fig_acc_proc()
+
+    # Fit DBMs and write ../dbm_fits/dbm_results.csv (can take time; uses differential evolution):
+    # fit_dbm()
+
+    # Model-class transition heatmaps (requires dbm_results.csv):
     # make_fig_dbm()
+
+    # Bayesian-style comparison plot for selected proportions (uses hard-coded counts at present):
     make_fig_dbm_state()
