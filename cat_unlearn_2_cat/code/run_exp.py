@@ -152,10 +152,14 @@ if __name__ == "__main__":
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    keep_running = False
+                    running = False
                     pygame.quit()
+                    break
                 else:
                     resp = event.key
+
+        if not running:
+            break
 
         if state_current == "state_explicit_instruct":
             time_state += clock_state.tick()

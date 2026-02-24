@@ -1,6 +1,6 @@
-# cat_unlearn
+# cat_unlearn (2-category version)
 
-Code, data, and manuscript files for the paper (in preparation):
+Code, data, analysis outputs, and manuscript files for the paper (in preparation):
 
 **Memory masking vs overwriting in procedural categorization**
 
@@ -22,7 +22,7 @@ Macquarie University, Sydney, Australia
 
 ---
 
-## Directory structure
+## Directory Structure
 
 - **code/**
   Analysis scripts, utilities, and experiment runtime code.
@@ -46,21 +46,43 @@ Macquarie University, Sydney, Australia
   LaTeX manuscript sources and compiled PDF.
 
 - **consent/**
-  Participant consent forum (no signed forums or other
-  identifiying information contained here).
+  Participant consent form template (no signed forms or other
+  identifying information contained here).
 
 ---
 
-## How to run
+## Setup
 
-From the `code/` directory:
+This project does not currently include a pinned environment file.
+The analysis scripts import:
+
+- `numpy`
+- `pandas`
+- `matplotlib`
+- `scipy`
+- `seaborn`
+- `pingouin`
+- `pygame` (runtime script only)
+
+Example (from repo root):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install numpy pandas matplotlib scipy seaborn pingouin pygame
+```
+
+---
+
+## How To Run
+
+From the `code/` directory, run:
 
 ```bash
 python inspect_results_clean.py
-````
+```
 
-Edit the `__main__` section to enable the analyses/figures
-you want.
+Edit the `__main__` section in `inspect_results_clean.py` to enable the analyses/figures you want.
 
 Typical workflow:
 
@@ -84,9 +106,23 @@ Typical workflow:
 
 Outputs are written to `../figures/` and `../dbm_fits/`.
 
+### Running the experiment (data collection)
+
+From the `code/` directory:
+
+```bash
+python run_exp.py
+```
+
+Notes:
+
+- Uses `pygame` and opens a fullscreen display.
+- Subject number and condition assignment are currently set in-script.
+- Trial data are saved to `../data/`.
+
 ---
 
-## Raw data format (CSV)
+## Raw Data Format (CSV)
 
 Each file in `data/` is a single subject's trial-level data. The main analysis script (`inspect_results_clean.py`) expects:
 
@@ -123,4 +159,3 @@ The script adds:
 
 * `phase` - Learn / Intervention / Test
 * `acc` - boolean accuracy (`cat == resp` after recoding)
-

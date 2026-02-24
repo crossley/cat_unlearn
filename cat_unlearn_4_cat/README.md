@@ -1,6 +1,6 @@
 # cat_unlearn (4-category version)
 
-Code, data, and manuscript files for the paper (in preparation):
+Code, data, and in-progress analysis/modeling utilities for the paper (in preparation):
 
 **Memory masking vs overwriting in procedural categorization**
 
@@ -26,11 +26,10 @@ Macquarie University, Sydney, Australia
 
 ---
 
-## Directory structure
+## Directory Structure
 
 - **code/**
-  Analysis scripts, utilities, and experiment runtime code for the
-  4-category task.
+  Experiment runtime and utilities for the 4-category task (plus DBM utilities).
   - `util_func_dbm.py` — decision-bound model (DBM) likelihoods and fitting utilities
   - `util_func.py` — stimulus generation / visualization utilities
   - `run_exp.py` — experiment runtime (Pygame; used to run the experiment and generate data)
@@ -48,22 +47,60 @@ Macquarie University, Sydney, Australia
   LaTeX manuscript sources and compiled PDF. (Currently empty.)
 
 - **consent/**
-  Participant consent forum (no signed forums or other
-  identifiying information contained here).
+  Participant consent form template (no signed forms or other
+  identifying information contained here).
 
 ---
 
-## How to run
+## Setup
 
-Analysis workflow for the 4-category task is under active development.
-Scripts and outputs will be added here as they are finalized.
+This project does not currently include a pinned environment file.
+The code imports:
+
+- `numpy`
+- `pandas`
+- `matplotlib`
+- `scipy`
+- `seaborn`
+- `pingouin`
+- `pygame`
+
+Example (from repo root):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install numpy pandas matplotlib scipy seaborn pingouin pygame
+```
 
 ---
 
-## Raw data format (CSV)
+## How To Run
+
+The 4-category runtime is currently the main executable component.
+
+From the `code/` directory:
+
+```bash
+python run_exp.py
+```
+
+What it does:
+
+- Creates a randomized subject/session ID and metadata JSON.
+- Assigns a condition (`relearn` / `new_learn`) programmatically.
+- Runs the fullscreen `pygame` experiment.
+- Writes trial data and session metadata to `../data/`.
+
+Analysis workflow for the 4-category task is still under active development.
+Scripts and outputs will be added/expanded here as they are finalized.
+
+---
+
+## Raw Data Format (CSV)
 
 Each file in `data/` is a single subject's trial-level data. Analysis scripts will document any
-task-specific expectations.
+task-specific expectations as they are finalized.
 
 * Each subject CSV contains **899 rows** in chronological order:
 
@@ -75,9 +112,9 @@ task-specific expectations.
 
   * `phase = ["Learn"] * 300 + ["Intervention"] * 300 + ["Test"] * 299`
 
-### Expected columns
+### Expected Columns
 
-The analysis relies on these columns being present:
+The runtime currently writes columns compatible with the 2-category project structure (with 4-category labels in `cat` / `resp` where applicable):
 
 | Column       | Meaning / usage                                                           |
 | ------------ | ------------------------------------------------------------------------- |
@@ -85,16 +122,16 @@ The analysis relies on these columns being present:
 | `condition`  | Condition label (e.g., `relearn`, `new_learn`). Used for grouping.        |
 | `subject`    | Subject ID. Used for grouping and exclusions.                             |
 | `trial`      | Trial index within file/session. Used for filtering late-learning trials. |
-| `cat`        | True category label (`A`/`B`), recoded to 0/1 for modeling.               |
+| `cat`        | True category label (4-category labels in this variant).                   |
 | `x`          | Stimulus dimension 1 (used in plots and DBM fits).                        |
 | `y`          | Stimulus dimension 2 (used in plots and DBM fits).                        |
 | `xt`         | Same as `x` but transformed to cycles per cm                              |
 | `yt`         | Same as `y` but transformed to radians                                    |
-| `resp`       | Participant response (`A`/`B` or numeric), recoded to 0/1 for modeling.   |
+| `resp`       | Participant response (key-coded / category-coded response value).          |
 | `rt`         | Participant response time in ms                                           |
 | `fb`         | Feedback received (e.g., `correct`/`incorrect`). Used for accuracy checks.|
 
-The script adds:
+Downstream analysis scripts are expected to add:
 
 * `phase` - Learn / Intervention / Test
 * `acc` - boolean accuracy (`cat == resp` after recoding)

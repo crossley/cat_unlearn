@@ -25,45 +25,45 @@ if __name__ == "__main__":
                                         ordered=True)
         ds = pd.concat([ds_train, ds_test]).reset_index(drop=True)
 
-    # plot the stimuli coloured by label
-    import seaborn as sns
-    fig, ax = plt.subplots(2, 2, squeeze=False, figsize=(12, 6))
-    fig.suptitle(
-        f"Experiment {condition['experiment']} - {condition['condition']}")
-    sns.scatterplot(data=ds.iloc[:600],
-                    x="x",
-                    y="y",
-                    hue="cat",
-                    alpha=0.5,
-                    ax=ax[0, 0])
-    sns.scatterplot(data=ds.iloc[:600],
-                    x="xt",
-                    y="yt",
-                    hue="cat",
-                    alpha=0.5,
-                    ax=ax[0, 1])
-    sns.scatterplot(data=ds.iloc[600:],
-                    x="x",
-                    y="y",
-                    hue="cat",
-                    alpha=0.5,
-                    ax=ax[1, 0])
-    sns.scatterplot(data=ds.iloc[600:],
-                    x="xt",
-                    y="yt",
-                    hue="cat",
-                    alpha=0.5,
-                    ax=ax[1, 1])
-    ax[0, 0].plot([0, 100], [0, 100], 'k--')
-    ax[1, 0].plot([0, 100], [0, 100], 'k--')
-    ax[0, 0].plot([0, 100], [100, 0], 'k--')
-    ax[1, 0].plot([0, 100], [100, 0], 'k--')
-    ax[0, 1].plot([0, 5], [0, np.pi / 2], 'k--')
-    ax[1, 1].plot([0, 5], [0, np.pi / 2], 'k--')
-    ax[1, 1].plot([0, 5], [0, np.pi / 2], 'k--')
-    ax[1, 1].plot([0, 5], [np.pi / 2, 0], 'k--')
-    [ax[i, j].legend(loc='upper right') for i in range(2) for j in range(2)]
-    plt.show()
+    # Optional debug plot of generated stimuli (disabled for normal runtime):
+    # import seaborn as sns
+    # fig, ax = plt.subplots(2, 2, squeeze=False, figsize=(12, 6))
+    # fig.suptitle(
+    #     f"Experiment {condition['experiment']} - {condition['condition']}")
+    # sns.scatterplot(data=ds.iloc[:600],
+    #                 x="x",
+    #                 y="y",
+    #                 hue="cat",
+    #                 alpha=0.5,
+    #                 ax=ax[0, 0])
+    # sns.scatterplot(data=ds.iloc[:600],
+    #                 x="xt",
+    #                 y="yt",
+    #                 hue="cat",
+    #                 alpha=0.5,
+    #                 ax=ax[0, 1])
+    # sns.scatterplot(data=ds.iloc[600:],
+    #                 x="x",
+    #                 y="y",
+    #                 hue="cat",
+    #                 alpha=0.5,
+    #                 ax=ax[1, 0])
+    # sns.scatterplot(data=ds.iloc[600:],
+    #                 x="xt",
+    #                 y="yt",
+    #                 hue="cat",
+    #                 alpha=0.5,
+    #                 ax=ax[1, 1])
+    # ax[0, 0].plot([0, 100], [0, 100], 'k--')
+    # ax[1, 0].plot([0, 100], [0, 100], 'k--')
+    # ax[0, 0].plot([0, 100], [100, 0], 'k--')
+    # ax[1, 0].plot([0, 100], [100, 0], 'k--')
+    # ax[0, 1].plot([0, 5], [0, np.pi / 2], 'k--')
+    # ax[1, 1].plot([0, 5], [0, np.pi / 2], 'k--')
+    # ax[1, 1].plot([0, 5], [0, np.pi / 2], 'k--')
+    # ax[1, 1].plot([0, 5], [np.pi / 2, 0], 'k--')
+    # [ax[i, j].legend(loc='upper right') for i in range(2) for j in range(2)]
+    # plt.show()
 
     # plot_stim_space_examples(ds)
 
@@ -147,10 +147,14 @@ if __name__ == "__main__":
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    keep_running = False
+                    running = False
                     pygame.quit()
+                    break
                 else:
                     resp = event.key
+
+        if not running:
+            break
 
         if state_current == "state_explicit_instruct":
             time_state += clock_state.tick()

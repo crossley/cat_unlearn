@@ -1,0 +1,93 @@
+# cat_unlearn
+
+Repository for procedural categorization "cat unlearning" experiments and analyses associated with the manuscript:
+
+`Memory masking vs overwriting in procedural categorization` (in preparation)
+
+## What is in this repo
+
+- `cat_unlearn_2_cat/`: mature 2-category experiment, analysis scripts, data, DBM fits, figures, and manuscript files.
+- `cat_unlearn_4_cat/`: 4-category task variant with experiment/runtime code and modeling utilities; analysis outputs are mostly placeholders at present.
+
+## Quick Start
+
+This repository does not currently include a `requirements.txt` / `environment.yml`, so dependencies are inferred from imports.
+
+Core Python packages used across the projects:
+
+- `numpy`
+- `pandas`
+- `matplotlib`
+- `scipy`
+- `seaborn`
+- `pygame`
+- `pingouin`
+
+Example setup (from repo root):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install numpy pandas matplotlib scipy seaborn pygame pingouin
+```
+
+## Typical Workflows
+
+### 2-category analysis (recommended starting point)
+
+```bash
+cd cat_unlearn_2_cat/code
+python inspect_results_clean.py
+```
+
+The `__main__` block in `cat_unlearn_2_cat/code/inspect_results_clean.py` toggles which analyses/figures run.
+
+Outputs are written to:
+
+- `cat_unlearn_2_cat/figures/`
+- `cat_unlearn_2_cat/dbm_fits/`
+
+### 2-category experiment runtime (data collection)
+
+```bash
+cd cat_unlearn_2_cat/code
+python run_exp.py
+```
+
+Notes:
+
+- Uses `pygame` and opens a fullscreen window.
+- Subject ID and condition assignment are currently controlled in-script.
+- Trial data are written to `cat_unlearn_2_cat/data/`.
+
+### 4-category experiment runtime (variant / in-progress)
+
+```bash
+cd cat_unlearn_4_cat/code
+python run_exp.py
+```
+
+Notes:
+
+- Uses `pygame` and opens a fullscreen window.
+- Session metadata and trial data are written to `cat_unlearn_4_cat/data/`.
+- Analysis pipeline for this variant is not yet documented/finalized.
+
+## Repository Layout
+
+- `cat_unlearn_2_cat/code/`: analysis, visualization, DBM fitting, and runtime scripts
+- `cat_unlearn_2_cat/data/`: subject CSVs (trial-level)
+- `cat_unlearn_2_cat/dbm_fits/`: model-fit outputs
+- `cat_unlearn_2_cat/figures/`: generated figures
+- `cat_unlearn_2_cat/write/`: LaTeX manuscript and compiled PDF
+- `cat_unlearn_2_cat/consent/`: blank consent materials
+- `cat_unlearn_4_cat/...`: analogous structure for the 4-category variant
+
+## Data / Ethics Note
+
+Consent materials are included as templates only. No signed consent forms or directly identifying participant records are stored in this repository.
+
+## Project Status
+
+- 2-category project: analysis-ready and documented.
+- 4-category project: runtime and utilities present; analysis and outputs are under development.
