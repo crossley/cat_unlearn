@@ -1,161 +1,138 @@
-# cat_unlearn (2-category version)
+# Memory masking vs overwriting in procedural categorization
 
-Code, data, analysis outputs, and manuscript files for the paper (in preparation):
+Code, data, analysis outputs, and manuscript files for the paper:
 
 **Memory masking vs overwriting in procedural categorization**
-
-## Authors
-
-Matthew J. Crossley^{1, 2, 3}
-Kayla C. Rail^{1}
-Jack Mair^{1}
-David M. Kaplan^{1, 2, 3}
-
-**1** School of Psychological Sciences, Macquarie
-University, Sydney, Australia
-
-**2** Performance and Expertise Research Centre, Macquarie
-University, Sydney, Australia
-
-**3** Macquarie Minds and Intelligences Initiative,
-Macquarie University, Sydney, Australia
-
----
 
 ## Directory Structure
 
 - **code/**
   Analysis scripts, utilities, and experiment runtime code.
-  - `inspect_results_clean.py` — main analysis script
-  - `util_func_dbm.py` — decision-bound model (DBM) likelihoods and fitting utilities
-  - `util_func.py` — stimulus generation / visualization utilities
-  - `run_exp.py` — experiment runtime (Pygame; used to run the experiment and generate data)
+  - `inspect_results.py` - thin entry-point script for running analysis functions
+  - `util_func_figs.py` - figure-generation functions
+  - `util_func_dbm.py` - decision-bound model (DBM) fitting and likelihood functions
+  - `util_func_wrangle.py` - data loading and DBM-result wrangling helpers
+  - `util_func_stimcat.py` - stimulus generation and grating utilities
+  - `make_example_trials_fig.py` - standalone example-trials figure script
+  - `generate_example_trial.py` - standalone raster example-trial image builder
+  - `run_exp.py` - experiment runtime used to generate subject CSVs
 
 - **data/**
-  Trial-level data files, one CSV per subject (e.g., `sub_1_data.csv`).
+  Trial-level data files, one CSV per subject (for example `sub_1_data.csv`).
 
 - **dbm_fits/**
-  Saved DBM fitting results (CSV) produced by `fit_dbm()`:
-  - `dbm_results.csv` — full output (fits per subject × block × model)
-  - `dbm_results_short.csv` — reduced/summary version (if used)
+  Saved DBM fitting results written by the analysis script.
+  - `dbm_results.csv` - fits per subject x block x model
 
 - **figures/**
-  Output figures saved by analysis scripts.
+  Analysis outputs currently present in this subtree.
+  - `fig_cat_struct.pdf`
+  - `fig_cat_struct.png`
+  - `subjects_accuracy_all.png`
+  - `best_model_class_heatmap.png`
+  - `bayesian_comparison.png`
 
 - **write/**
-  LaTeX manuscript sources and compiled PDF.
-
-- **consent/**
-  Participant consent form template (no signed forms or other
-  identifying information contained here).
-
----
+  Compiled manuscript output currently included here.
+  - `main.pdf`
 
 ## Setup
 
-This project does not currently include a pinned environment file.
-The analysis scripts import:
+For software requirements, see the pinned `requirements.txt` or read below.
 
-- `numpy`
-- `pandas`
-- `matplotlib`
-- `scipy`
-- `seaborn`
-- `pingouin`
-- `pygame` (runtime script only)
+Analysis code uses:
 
-Example (from repo root):
+- `numpy==1.26.4`
+- `pandas==2.2.2`
+- `matplotlib==3.8.4`
+- `scipy==1.13.1`
+- `seaborn==0.13.2`
+- `pingouin==0.5.4`
+- `Pillow==10.3.0`
+- `pygame==2.5.2`
+
+Example setup from the repo root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install numpy pandas matplotlib scipy seaborn pingouin pygame
+pip install -r requirements.txt
 ```
-
----
 
 ## How To Run
 
-From the `code/` directory, run:
+Run analysis scripts from the `code/` directory so relative
+paths resolve correctly.
+
+### Main analysis workflow
 
 ```bash
-python inspect_results_clean.py
+cd code
+python inspect_results.py
 ```
 
-Edit the `__main__` section in `inspect_results_clean.py` to enable the analyses/figures you want.
+`inspect_results.py` is now a thin runner that imports top-level functions from the utility modules and exposes them as commented calls in its `__main__` block.
 
-Typical workflow:
+Any generated output is controlled by the `__main__` block near the end of `inspect_results.py`.
 
-1. Generate descriptive figures:
+- `make_fig_cat_struct()` - writes `fig_cat_struct.png`
+- `make_fig_acc_all()` - writes `subjects_accuracy_all.png`
+- `make_fig_acc_talk()` - writes two talk-style PDF figures
+- `fit_dbm_top()` - writes `dbm_results.csv`
+- `make_fig_dbm()` - writes `best_model_class_heatmap.png`
+- `make_fig_dbm_bayes()` - writes `bayesian_comparison.png`
 
-   * `make_fig_cat_struct()`
-   * `make_fig_acc_all()`
+Current module layout:
 
-2. Fit DBMs (writes `../dbm_fits/dbm_results.csv`):
+- `inspect_results.py` - manual entry point for running selected analyses
+- `util_func_figs.py` - figure functions
+- `util_func_dbm.py` - model fitting code
+- `util_func_wrangle.py` - data wrangling helpers
+- `util_func_stimcat.py` - stimulus-generation helpers
 
-   * `fit_dbm()`
-
-3. Make model-selection / transition plots:
-
-   * `make_fig_dbm()`
-   * `make_fig_acc_proc()`
-
-4. Generate Bayesian comparison figure:
-
-   * `make_fig_dbm_state()`
-
-Outputs are written to `../figures/` and `../dbm_fits/`.
-
-### Running the experiment (data collection)
-
-From the `code/` directory:
+### Example-trials figure
 
 ```bash
+cd code
+python make_example_trials_fig.py
+```
+
+This writes `../figures/example_trials_figure.png`.
+
+### Running the experiment
+
+```bash
+cd code
 python run_exp.py
 ```
 
-Notes:
-
 - Uses `pygame` and opens a fullscreen display.
-- Subject number and condition assignment are currently set in-script.
-- Trial data are saved to `../data/`.
+- Subject number is set directly in the script.
+- Condition assignment is currently determined in-script from `condition_list`.
+- Trial data are written to `../data/sub_<subject>_data.csv`.
 
----
+## Raw Data Format
 
-## Raw Data Format (CSV)
+Each CSV file in `data/` is a single subject's trial-level data and has the following format:
 
-Each file in `data/` is a single subject's trial-level data. The main analysis script (`inspect_results_clean.py`) expects:
+| Column Name | Column Description |
+| --- | --- |
+| `experiment` | Experiment identifier: `1` or `2` |
+| `condition` | Condition label: `relearn` or `new_learn` |
+| `subject` | Subject identifier |
+| `trial` | Trial number|
+| `cat` | True category label: `A` or `B` |
+| `x` | Stimulus dimension 1 in abstract stimulus space|
+| `y` | Stimulus dimension 2 in abstract stimulus space|
+| `xt` | Spatial frequency in cycles per degree |
+| `yt` | Orientation in radians |
+| `resp` | Participant response: `A` or `B` |
+| `rt` | Response time in ms |
+| `fb` | Feedback: `Correct` or `Incorrect` |
 
-* Each subject CSV contains **899 rows** in chronological order:
+The analysis code assumes each CSV contains **899 rows** in
+chronological order:
 
-  * **Learn:** 300 trials
-  * **Intervention:** 300 trials
-  * **Test:** 299 trials
-
-* The script assigns a `phase` column based on row position:
-
-  * `phase = ["Learn"] * 300 + ["Intervention"] * 300 + ["Test"] * 299`
-
-### Expected columns
-
-The analysis relies on these columns being present:
-
-| Column       | Meaning / usage                                                           |
-| ------------ | ------------------------------------------------------------------------- |
-| `experiment` | Experiment identifier (e.g., 1 or 2). Used for grouping/plot panels.      |
-| `condition`  | Condition label (e.g., `relearn`, `new_learn`). Used for grouping.        |
-| `subject`    | Subject ID. Used for grouping and exclusions.                             |
-| `trial`      | Trial index within file/session. Used for filtering late-learning trials. |
-| `cat`        | True category label (`A`/`B`), recoded to 0/1 for modeling.               |
-| `x`          | Stimulus dimension 1 (used in plots and DBM fits).                        |
-| `y`          | Stimulus dimension 2 (used in plots and DBM fits).                        |
-| `xt`         | Same as `x` but transformed to cycles per cm                              |
-| `yt`         | Same as `y` but transformed to radians                                    |
-| `resp`       | Participant response (`A`/`B` or numeric), recoded to 0/1 for modeling.   |
-| `rt`         | Participant response time in ms                                           |
-| `fb`         | Feedback received (e.g., `correct`/`incorrect`). Used for accuracy checks.|
-
-The script adds:
-
-* `phase` - Learn / Intervention / Test
-* `acc` - boolean accuracy (`cat == resp` after recoding)
+- `Learn`: 300 trials
+- `Intervention`: 300 trials
+- `Test`: 299 trials

@@ -1,5 +1,12 @@
-from imports import *
-from util_func import *
+import os
+import sys
+
+import numpy as np
+import pandas as pd
+import pygame
+
+from util_func_stimcat import (create_grating_patch, grating_to_surface,
+                               make_stim_cats)
 
 if __name__ == "__main__":
 

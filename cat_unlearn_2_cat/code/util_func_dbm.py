@@ -1,21 +1,51 @@
-import os
-import copy
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.lines import Line2D
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import seaborn as sns
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
-from scipy.stats import multivariate_normal
-from scipy import signal
 from scipy.stats import norm
-from scipy.stats import binom
-from scipy.optimize import differential_evolution, LinearConstraint
-from scipy import stats
-import pingouin as pg
+from scipy.optimize import differential_evolution
+
+from util_func_wrangle import get_cl_df
+
+
+def fit_dbm_top():
+
+    d = get_cl_df()
+
+    block_size = 100
+    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+
+    d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
+
+    d = d.sort_values(["experiment", "condition", "subject", "block", "trial"])
+
+    models = [
+        nll_rand_guess,
+        nll_bias_guess,
+        nll_unix,
+        nll_unix,
+        nll_uniy,
+        nll_uniy,
+        nll_glc,
+        nll_glc,
+    ]
+    side = [0, 0, 0, 1, 0, 1, 0, 1]
+    k = [0, 1, 2, 2, 2, 2, 3, 3]
+    n = block_size
+    model_names = [
+        "nll_rand_guess",
+        "nll_bias_guess",
+        "nll_unix_0",
+        "nll_unix_1",
+        "nll_uniy_0",
+        "nll_uniy_1",
+        "nll_glc_0",
+        "nll_glc_1",
+    ]
+
+    dbm = (d.groupby(["experiment", "condition", "subject",
+                      "block"]).apply(fit_dbm, models, side, k, n,
+                                      model_names).reset_index())
+
+    dbm.to_csv("../dbm_fits/dbm_results.csv")
 
 
 def fit_dbm(d, model_func, side, k, n, model_name):
@@ -89,6 +119,10 @@ def fit_dbm(d, model_func, side, k, n, model_name):
             bnd = ((-1, 1), (blb, bub), (nlb, nub))
         elif "gcc" in model_name[m]:
             bnd = ((0, 100), (0, 100), (nlb, nub))
+        elif "rand_guess" in model_name[m]:
+            bnd = ((0, 1), )  # dummy param; NLL is constant, k=0 for BIC
+        elif "bias_guess" in model_name[m]:
+            bnd = ((0.001, 0.999), )
 
         z_limit = 3
 
@@ -112,15 +146,14 @@ def fit_dbm(d, model_func, side, k, n, model_name):
         tmp = np.concatenate((results["x"], [results["fun"]]))
         tmp = np.reshape(tmp, (tmp.shape[0], 1))
 
-        # a1*x + a2*y + b = 0
-        # y = -(a1*x + b) / a2
-        a1 = results['x'][0]
-        a2 = np.sqrt(1 - a1**2)
-        b = results['x'][1]
-
         print(d[["condition", "subject"]].iloc[0])
         print(model_name[m], results["x"], results["fun"])
-        print(a1, a2, b)
+        if len(results['x']) >= 2:
+            # a1*x + a2*y + b = 0  /  y = -(a1*x + b) / a2
+            a1 = results['x'][0]
+            a2 = np.sqrt(1 - a1**2)
+            b = results['x'][1]
+            print(a1, a2, b)
         print(np.unique(resp))
 
         #        fig, ax = plt.subplots(1, 1, squeeze=False)
@@ -323,6 +356,50 @@ def nll_gcc_eq(params, *args):
     log_B_probs = np.log(prB[B_indices])
 
     nll = -(np.sum(log_A_probs) + np.sum(log_B_probs))
+
+    return nll
+
+
+def nll_rand_guess(params, *args):
+    """
+    Random guessing model: P(B) = 0.5 for all stimuli regardless of position.
+    No true free parameters; accepts one dummy param to satisfy differential_evolution.
+    Set k=0 in the BIC calculation when using this model.
+    """
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    n = x.shape[0]
+    nll = n * np.log(2)
+
+    return nll
+
+
+def nll_bias_guess(params, *args):
+    """
+    Biased guessing model: P(B) = b for all stimuli regardless of position.
+    One free parameter: b, the constant probability of responding B.
+    """
+    b = params[0]
+
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    A_indices = np.where(resp == 0)
+    B_indices = np.where(resp == 1)
+
+    prA = np.clip(1 - b, 1e-10, 1 - 1e-10)
+    prB = np.clip(b, 1e-10, 1 - 1e-10)
+
+    nll = -(len(A_indices[0]) * np.log(prA) + len(B_indices[0]) * np.log(prB))
 
     return nll
 

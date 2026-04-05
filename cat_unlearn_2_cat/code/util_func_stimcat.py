@@ -1,4 +1,6 @@
-from imports import *
+import numpy as np
+import pandas as pd
+import pygame
 
 
 def make_stim_cats():
