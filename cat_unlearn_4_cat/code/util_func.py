@@ -1,60 +1,6 @@
 from imports import *
 
 
-def start_session():
-
-    dir_data = "../data"
-    os.makedirs(dir_data, exist_ok=True)
-
-    now = datetime.now()
-
-    session_token = uuid.uuid4().hex[:12]
-    hostname = socket.gethostname()
-    machine_id = hashlib.sha1(hostname.encode()).hexdigest()[:6]
-
-    subject_id = f"{session_token}_{machine_id}"
-
-    data_fname = f"sub_{subject_id}_data.csv"
-    meta_fname = f"sub_{subject_id}_meta.json"
-
-    data_path = os.path.join(dir_data, data_fname)
-    meta_path = os.path.join(dir_data, meta_fname)
-
-    if os.path.exists(data_path) or os.path.exists(meta_path):
-        print(f"Files for {subject_id} already exist. Aborting.")
-        sys.exit()
-
-    experiment_1_relearn = {"experiment": 1, "condition": "relearn"}
-    experiment_1_new_learn = {"experiment": 1, "condition": "new_learn"}
-    experiment_2_relearn = {"experiment": 2, "condition": "relearn"}
-    experiment_2_new_learn = {"experiment": 2, "condition": "new_learn"}
-
-    condition_list = [experiment_2_relearn, experiment_2_new_learn]
-
-    idx = int(hashlib.sha1(subject_id.encode()).hexdigest(),
-              16) % len(condition_list)
-    condition = condition_list[idx]
-
-    metadata = {
-        "subject_id": subject_id,
-        "start_time": now.isoformat(timespec="seconds"),
-        "machine_id": machine_id,
-        "platform": platform.platform(),
-        "python_version": platform.python_version(),
-        "condition": condition,
-        "condition_index": idx
-    }
-
-    try:
-        with open(meta_path, "x") as f:
-            json.dump(metadata, f, indent=4)
-    except FileExistsError:
-        print(f"Metadata file already exists: {meta_path}. Aborting.")
-        sys.exit()
-
-    return subject_id, data_path, meta_path, condition
-
-
 def make_stim_cats():
 
     n_stimuli_per_category = 225

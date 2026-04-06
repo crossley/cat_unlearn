@@ -3,7 +3,29 @@ from util_func import *
 
 if __name__ == "__main__":
 
-    subject, data_path, meta_path, condition = start_session()
+    # set subject number
+    subject = 1
+    dir_data = "../data"
+    os.makedirs(dir_data, exist_ok=True)
+    f_name = f"sub_{subject}_data.csv"
+    data_path = os.path.join(dir_data, f_name)
+
+    # Uncomment to check if file already exists
+    if os.path.exists(data_path):
+        print(f"File {f_name} already exists. Aborting.")
+        sys.exit()
+
+    experiment_1_relearn = {"experiment": 1, "condition": "relearn"}
+    experiment_1_new_learn = {"experiment": 1, "condition": "new_learn"}
+    experiment_2_relearn = {"experiment": 2, "condition": "relearn"}
+    experiment_2_new_learn = {"experiment": 2, "condition": "new_learn"}
+
+    # condition_list = [experiment_1_relearn, experiment_1_new_learn]
+    condition_list = [experiment_2_relearn, experiment_2_new_learn]
+
+    condition = condition_list[(subject - 1) % len(condition_list)]
+    print((subject - 1) % 2)
+    print(condition)
 
     if condition["condition"] == "relearn":
         ds = make_stim_cats()
@@ -25,7 +47,7 @@ if __name__ == "__main__":
                                         ordered=True)
         ds = pd.concat([ds_train, ds_test]).reset_index(drop=True)
 
-    # Optional debug plot of generated stimuli (disabled for normal runtime):
+    # # debug plot of generated stimuli:
     # import seaborn as sns
     # fig, ax = plt.subplots(2, 2, squeeze=False, figsize=(12, 6))
     # fig.suptitle(
