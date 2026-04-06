@@ -26,8 +26,6 @@ Code, data, analysis outputs, and manuscript files for the paper:
 
 - **figures/**
   Analysis outputs currently present in this subtree.
-  - `fig_cat_struct.pdf`
-  - `fig_cat_struct.png`
   - `subjects_accuracy_all.png`
   - `best_model_class_heatmap.png`
   - `bayesian_comparison.png`
@@ -75,7 +73,6 @@ python inspect_results.py
 
 Any generated output is controlled by the `__main__` block near the end of `inspect_results.py`.
 
-- `make_fig_cat_struct()` - writes `fig_cat_struct.png`
 - `make_fig_acc_all()` - writes `subjects_accuracy_all.png`
 - `make_fig_acc_talk()` - writes two talk-style PDF figures
 - `fit_dbm_top()` - writes `dbm_results.csv`
