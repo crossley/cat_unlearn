@@ -138,6 +138,7 @@ if __name__ == "__main__":
     state_current = "state_init"
 
     # behavioural measurements
+    key_pressed = -1
     resp = -1
     rt = -1
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
                     pygame.quit()
                     break
                 else:
-                    resp = event.key
+                    key_pressed = event.key
 
         if not running:
             break
@@ -200,9 +201,9 @@ if __name__ == "__main__":
                                                   ii * spacing))
                 screen.blit(text, text_rect)
 
-            if resp == pygame.K_y:
+            if key_pressed == pygame.K_y:
                 time_state = 0
-                resp = -1
+                key_pressed = -1
                 state_current = "state_iti"
 
         if state_current == "state_init":
@@ -213,9 +214,9 @@ if __name__ == "__main__":
                                               screen_height / 2))
             screen.fill(grey)
             screen.blit(text, text_rect)
-            if resp == pygame.K_SPACE:
+            if key_pressed == pygame.K_SPACE:
                 time_state = 0
-                resp = -1
+                key_pressed = -1
                 state_current = "state_iti"
 
         if state_current == "state_finished":
@@ -235,6 +236,7 @@ if __name__ == "__main__":
             pygame.draw.line(screen, white, (center_x - 10, center_y),
                              (center_x + 10, center_y), 4)
             if time_state > 1000:
+                key_pressed = -1
                 resp = -1
                 rt = -1
                 time_state = 0
@@ -257,18 +259,20 @@ if __name__ == "__main__":
                         (center_x - size_px / 2, center_y - size_px / 2))
 
             listen_keys = [pygame.K_d, pygame.K_f, pygame.K_j, pygame.K_k]
-            if resp in listen_keys:
+            if key_pressed in listen_keys:
                 rt = time_state
                 time_state = 0
 
-                if resp == pygame.K_d:
+                if key_pressed == pygame.K_d:
                     resp = "A"
-                elif resp == pygame.K_f:
+                elif key_pressed == pygame.K_f:
                     resp = "B"
-                elif resp == pygame.K_j:
+                elif key_pressed == pygame.K_j:
                     resp = "C"
-                elif resp == pygame.K_k:
+                elif key_pressed == pygame.K_k:
                     resp = "D"
+
+                key_pressed = -1
 
                 # Give veridical feedback in all conditions during acquisition and reacquisition
                 if (trial < 300) or (trial >= 600):
@@ -281,7 +285,7 @@ if __name__ == "__main__":
                     # Exp 1: random feedback during intervention
                     if condition["experiment"] == 1:
                         # random feedback
-                        if np.random.rand() < 0.5:
+                        if np.random.rand() < 0.25:
                             fb = "Correct"
                         else:
                             fb = "Incorrect"
@@ -297,7 +301,7 @@ if __name__ == "__main__":
 
                         # Give 100% random feedback the rest of the time
                         else:
-                            if np.random.rand() < 0.5:
+                            if np.random.rand() < 0.25:
                                 fb = "Correct"
                             else:
                                 fb = "Incorrect"
