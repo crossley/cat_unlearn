@@ -22,10 +22,44 @@ def get_cl_df():
     d.groupby(["experiment", "condition"])["subject"].unique()
     d.groupby(["experiment", "condition"])["subject"].nunique()
 
-    d.loc[d["cat"] == "A", "cat"] = 0
-    d.loc[d["cat"] == "B", "cat"] = 1
-    d.loc[d["resp"] == "A", "resp"] = 0
-    d.loc[d["resp"] == "B", "resp"] = 1
+    cat_map = {"A": 0, "B": 1, "0": 0, "1": 1, 0: 0, 1: 1}
+    resp_map = {
+        "A": 0, "B": 1, "0": 0, "1": 1, 0: 0, 1: 1
+    }
+
+    d["cat"] = d["cat"].replace(cat_map)
+    d["resp"] = d["resp"].replace(resp_map)
+
+    valid = d["cat"].isin([0, 1]) & d["resp"].isin([0, 1])
+
+    # exclude participants with >10% unmapped responses
+    invalid_rate = (
+        pd.DataFrame({
+            "experiment": d["experiment"],
+            "condition": d["condition"],
+            "subject": d["subject"],
+            "invalid": ~valid
+        }).groupby(["experiment", "condition", "subject"], as_index=False)
+          .agg(pct_invalid=("invalid", "mean"))
+    )
+    bad_subs = invalid_rate.loc[invalid_rate["pct_invalid"] > 0.10,
+                                ["experiment", "condition", "subject"]]
+    n_bad = bad_subs.shape[0]
+    if n_bad > 0:
+        print(f"Excluding {n_bad} participants with >10% unmapped responses.")
+        print(
+            bad_subs.groupby(["experiment", "condition"])["subject"].nunique())
+        d = d.merge(bad_subs.assign(exclude_subject=True),
+                    on=["experiment", "condition", "subject"],
+                    how="left")
+        d = d[d["exclude_subject"] != True].drop(columns="exclude_subject")
+        valid = d["cat"].isin([0, 1]) & d["resp"].isin([0, 1])
+
+    n_drop = (~valid).sum()
+    if n_drop > 0:
+        print(f"Dropping {n_drop} rows with unmapped cat/resp values.")
+    d = d.loc[valid].copy()
+
     d["cat"] = d["cat"].astype(int)
     d["resp"] = d["resp"].astype(int)
     d["acc"] = d["cat"] == d["resp"]

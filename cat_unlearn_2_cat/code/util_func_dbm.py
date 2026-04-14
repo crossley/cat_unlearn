@@ -26,9 +26,13 @@ def fit_dbm_top():
         nll_uniy,
         nll_glc,
         nll_glc,
+        nll_gcc_eq,
+        nll_gcc_eq,
+        nll_gcc_eq,
+        nll_gcc_eq,
     ]
-    side = [0, 0, 0, 1, 0, 1, 0, 1]
-    k = [0, 1, 2, 2, 2, 2, 3, 3]
+    side = [0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 2, 3]
+    k = [0, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
     n = block_size
     model_names = [
         "nll_rand_guess",
@@ -39,6 +43,10 @@ def fit_dbm_top():
         "nll_uniy_1",
         "nll_glc_0",
         "nll_glc_1",
+        "nll_gcc_eq_0",
+        "nll_gcc_eq_1",
+        "nll_gcc_eq_2",
+        "nll_gcc_eq_3",
     ]
 
     dbm = (d.groupby(["experiment", "condition", "subject",
@@ -75,27 +83,14 @@ def fit_dbm(d, model_func, side, k, n, model_name):
     mutation = fit_args["mutation"]
     recombination = fit_args["recombination"]
 
-    cnd = d["condition"]
-    sub = d["subject"]
-
     drec = []
     for m, mod in enumerate(model_func):
-        dd = d[(d["subject"] == sub)
-               & (d["condition"] == cnd)][["cat", "x", "y", "resp"]]
+        dd = d[["cat", "x", "y", "resp"]]
 
         cat = dd.cat.to_numpy()
         x = dd.x.to_numpy()
         y = dd.y.to_numpy()
         resp = dd.resp.to_numpy()
-
-        # nll funcs expect resp to be [0, 1]
-        n_zero = np.sum(resp == 0)
-        n_one = np.sum(resp == 1)
-        n_two = np.sum(resp == 2)
-        n_three = np.sum(resp == 3)
-
-        if np.argmax([n_zero, n_one, n_two, n_three]) > 1:
-            resp = resp - 2
 
         # rescale x and y to be [0, 100]
         range_x = np.max(x) - np.min(x)
@@ -146,9 +141,8 @@ def fit_dbm(d, model_func, side, k, n, model_name):
         tmp = np.concatenate((results["x"], [results["fun"]]))
         tmp = np.reshape(tmp, (tmp.shape[0], 1))
 
-        print(d[["condition", "subject"]].iloc[0])
         print(model_name[m], results["x"], results["fun"])
-        if len(results['x']) >= 2:
+        if "glc" in model_name[m]:
             # a1*x + a2*y + b = 0  /  y = -(a1*x + b) / a2
             a1 = results['x'][0]
             a2 = np.sqrt(1 - a1**2)
@@ -163,13 +157,13 @@ def fit_dbm(d, model_func, side, k, n, model_name):
         #        ax[0, 0].set_ylim(-5, 105)
         #        plt.show()
 
-        tmp = pd.DataFrame(results["x"])
-        tmp.columns = ["p"]
-        tmp["nll"] = results["fun"]
-        tmp["bic"] = k[m] * np.log(n) + 2 * results["fun"]
-        # tmp['aic'] = k[m] * 2 + 2 * results['fun']
-        tmp["model"] = model_name[m]
-        drec.append(tmp)
+        resx = pd.DataFrame(results["x"])
+        resx.columns = ["p"]
+        resx["nll"] = results["fun"]
+        resx["bic"] = k[m] * np.log(n) + 2 * results["fun"]
+        # resx['aic'] = k[m] * 2 + 2 * results['fun']
+        resx["model"] = model_name[m]
+        drec.append(resx)
 
     drec = pd.concat(drec)
     return drec
@@ -333,10 +327,10 @@ def nll_gcc_eq(params, *args):
     if side == 0:
         zscoresX = (x - xc) / noise
         zscoresY = (y - yc) / noise
-    if side == 1:
+    elif side == 1:
         zscoresX = (xc - x) / noise
         zscoresY = (y - yc) / noise
-    if side == 2:
+    elif side == 2:
         zscoresX = (x - xc) / noise
         zscoresY = (yc - y) / noise
     else:
@@ -404,6 +398,111 @@ def nll_bias_guess(params, *args):
     return nll
 
 
+def val_rand_guess(params, *args):
+    """
+    Generates model responses for random guessing.
+    P(B) = 0.5 for all stimuli.
+    """
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    prB = np.full(x.shape[0], 0.5, dtype=float)
+    resp = np.random.uniform(size=prB.shape) < prB
+    resp = resp.astype(int)
+
+    return cat, x, y, resp
+
+
+def val_bias_guess(params, *args):
+    """
+    Generates model responses for biased guessing.
+    P(B) = b for all stimuli.
+    """
+    b = params[0]
+
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    prB = np.full(x.shape[0], b, dtype=float)
+    prB = np.clip(prB, 1e-10, 1 - 1e-10)
+    resp = np.random.uniform(size=prB.shape) < prB
+    resp = resp.astype(int)
+
+    return cat, x, y, resp
+
+
+def val_unix(params, *args):
+    """
+    Generates model responses for unidimensional X boundary model.
+    params format: [bias noise]
+    """
+    xc = params[0]
+    noise = params[1]
+
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    zscoresX = (x - xc) / noise
+    zscoresX = np.clip(zscoresX, -z_limit, z_limit)
+
+    if side == 0:
+        prA = norm.cdf(zscoresX, 0.0, 1.0)
+        prB = 1 - prA
+    else:
+        prB = norm.cdf(zscoresX, 0.0, 1.0)
+        prA = 1 - prB
+
+    prB = np.clip(prB, 1e-10, 1 - 1e-10)
+    resp = np.random.uniform(size=prB.shape) < prB
+    resp = resp.astype(int)
+
+    return cat, x, y, resp
+
+
+def val_uniy(params, *args):
+    """
+    Generates model responses for unidimensional Y boundary model.
+    params format: [bias noise]
+    """
+    yc = params[0]
+    noise = params[1]
+
+    z_limit = args[0]
+    cat = args[1]
+    x = args[2]
+    y = args[3]
+    resp = args[4]
+    side = args[5]
+
+    zscoresY = (y - yc) / noise
+    zscoresY = np.clip(zscoresY, -z_limit, z_limit)
+
+    if side == 0:
+        prA = norm.cdf(zscoresY, 0.0, 1.0)
+        prB = 1 - prA
+    else:
+        prB = norm.cdf(zscoresY, 0.0, 1.0)
+        prA = 1 - prB
+
+    prB = np.clip(prB, 1e-10, 1 - 1e-10)
+    resp = np.random.uniform(size=prB.shape) < prB
+    resp = resp.astype(int)
+
+    return cat, x, y, resp
+
+
 def val_gcc_eq(params, *args):
     """
     Generates model responses for 2d data for the General Conjunctive
@@ -434,10 +533,10 @@ def val_gcc_eq(params, *args):
     if side == 0:
         zscoresX = (x - xc) / noise
         zscoresY = (y - yc) / noise
-    if side == 1:
+    elif side == 1:
         zscoresX = (xc - x) / noise
         zscoresY = (y - yc) / noise
-    if side == 2:
+    elif side == 2:
         zscoresX = (x - xc) / noise
         zscoresY = (yc - y) / noise
     else:

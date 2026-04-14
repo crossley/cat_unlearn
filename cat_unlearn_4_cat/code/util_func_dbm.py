@@ -300,10 +300,10 @@ def nll_gcc_eq(params, *args):
     if side == 0:
         zscoresX = (x - xc) / noise
         zscoresY = (y - yc) / noise
-    if side == 1:
+    elif side == 1:
         zscoresX = (xc - x) / noise
         zscoresY = (y - yc) / noise
-    if side == 2:
+    elif side == 2:
         zscoresX = (x - xc) / noise
         zscoresY = (yc - y) / noise
     else:
@@ -357,10 +357,10 @@ def val_gcc_eq(params, *args):
     if side == 0:
         zscoresX = (x - xc) / noise
         zscoresY = (y - yc) / noise
-    if side == 1:
+    elif side == 1:
         zscoresX = (xc - x) / noise
         zscoresY = (y - yc) / noise
-    if side == 2:
+    elif side == 2:
         zscoresX = (x - xc) / noise
         zscoresY = (yc - y) / noise
     else:
