@@ -8,8 +8,8 @@
 #PBS -l wd
 #PBS -J 0-3
 #PBS -N dbm_recovery_chunk
-#PBS -o logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.out
-#PBS -e logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.err
+#PBS -o logs/dbm_recovery_chunk.out
+#PBS -e logs/dbm_recovery_chunk.err
 
 set -euo pipefail
 
@@ -31,7 +31,6 @@ if [ -n "${VENV_PATH}" ]; then
 fi
 
 cd "$PBS_O_WORKDIR"
-cd code
 
 if [ "${PBS_ARRAY_INDEX}" -ge "${NUM_CHUNKS}" ]; then
   echo "PBS_ARRAY_INDEX=${PBS_ARRAY_INDEX} exceeds NUM_CHUNKS=${NUM_CHUNKS}" >&2

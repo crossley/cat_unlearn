@@ -25,7 +25,6 @@ if [ -n "${VENV_PATH}" ]; then
 fi
 
 cd "$PBS_O_WORKDIR"
-cd code
 
 python3 merge_dbm_recovery_chunks.py \
   --in-dir ../dbm_fits/recovery_chunks \
