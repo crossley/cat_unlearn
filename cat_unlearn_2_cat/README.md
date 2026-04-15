@@ -79,6 +79,65 @@ Any generated output is controlled by the `__main__` block near the end of `insp
 - `make_fig_dbm()` - writes `best_model_class_heatmap.png`
 - `make_fig_dbm_bayes()` - writes `bayesian_comparison.png`
 
+### Model Recovery On NCI Gadi
+
+Run the recovery workflow from `code/` after `../dbm_fits/dbm_results.csv`
+exists. The empirical DBM fits are now deterministic when fit with the same
+base seed, and recovery uses the original trial order to define blocks.
+
+The checked-in Gadi scripts are configured for a conservative demo run:
+
+- `4` array tasks total, matching PBS array range `0-3`
+- `1` recovery repetition per group
+- only the first `8` empirical subject/block groups are processed
+
+This keeps the default recovery workload small for a limited allocation. Scale
+up only after the demo run works cleanly.
+
+Before submitting to Gadi, replace `<PROJECT_CODE>` in both PBS scripts with
+your actual NCI project code.
+
+1. Generate or refresh empirical DBM fits locally:
+
+```bash
+cd code
+python -c "from util_func_dbm import fit_dbm_top; fit_dbm_top(seed=462)"
+```
+
+2. Submit the recovery array job on Gadi:
+
+```bash
+cd code
+qsub -v BLOCK=6,N_REPS=1,SEED=462,MAX_GROUPS=8 run_dbm_recovery_gadi.pbs
+```
+
+3. Wait for all `4` array tasks to finish successfully, then submit the merge:
+
+```bash
+cd code
+qsub -v BLOCK=6 merge_dbm_recovery_gadi.pbs
+```
+
+Outputs land in:
+
+- `../dbm_fits/recovery_chunks/` - one CSV per chunk
+- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_results.csv`
+- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_family_counts.csv`
+- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_family_props.csv`
+- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_counts.csv`
+- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_props.csv`
+
+The merge script now fails if any chunk is missing or if chunk filenames do not
+match the expected `4`-chunk array layout, so do not run the merge until the
+full array has completed cleanly.
+
+To scale beyond the demo:
+
+- edit `run_dbm_recovery_gadi.pbs` and `merge_dbm_recovery_gadi.pbs` together
+- increase the fixed `NUM_CHUNKS`
+- increase or remove `MAX_GROUPS`
+- increase `N_REPS` only after confirming the small run is acceptable
+
 Current module layout:
 
 - `inspect_results.py` - manual entry point for running selected analyses

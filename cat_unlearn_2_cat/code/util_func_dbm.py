@@ -1,3 +1,4 @@
+import hashlib
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -6,16 +7,24 @@ from scipy.optimize import differential_evolution
 from util_func_wrangle import get_cl_df
 
 
-def fit_dbm_top():
+def _stable_seed(base_seed, *parts):
+    joined = "|".join([str(base_seed), *[str(p) for p in parts]])
+    digest = hashlib.sha256(joined.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16)
+
+
+def fit_dbm_top(seed=462):
 
     d = get_cl_df()
 
     block_size = 100
-    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+    d["block"] = d["orig_trial_index"] // block_size
 
     d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
 
-    d = d.sort_values(["experiment", "condition", "subject", "block", "trial"])
+    d = d.sort_values(
+        ["experiment", "condition", "subject", "block", "orig_trial_index"]
+    )
 
     models = [
         nll_rand_guess,
@@ -51,12 +60,12 @@ def fit_dbm_top():
 
     dbm = (d.groupby(["experiment", "condition", "subject",
                       "block"]).apply(fit_dbm, models, side, k, n,
-                                      model_names).reset_index())
+                                      model_names, seed).reset_index())
 
     dbm.to_csv("../dbm_fits/dbm_results.csv")
 
 
-def fit_dbm(d, model_func, side, k, n, model_name):
+def fit_dbm(d, model_func, side, k, n, model_name, base_seed=462):
     fit_args = {
         "obj_func": None,
         "bounds": None,
@@ -84,6 +93,11 @@ def fit_dbm(d, model_func, side, k, n, model_name):
     recombination = fit_args["recombination"]
 
     drec = []
+    group_parts = []
+    for col in ["experiment", "condition", "subject", "block"]:
+        if col in d.columns:
+            group_parts.append(d.iloc[0][col])
+
     for m, mod in enumerate(model_func):
         dd = d[["cat", "x", "y", "resp"]]
 
@@ -127,6 +141,7 @@ def fit_dbm(d, model_func, side, k, n, model_name):
             func=mod,
             bounds=bnd,
             args=args,
+            seed=_stable_seed(base_seed, *group_parts, model_name[m]),
             disp=disp,
             maxiter=maxiter,
             popsize=popsize,

@@ -13,6 +13,7 @@ def get_cl_df():
 
         if file.endswith(".csv"):
             d = pd.read_csv(os.path.join(dir_data, file))
+            d["orig_trial_index"] = np.arange(len(d), dtype=int)
             d["phase"] = ["Learn"] * 300 + ["Intervention"] * 300 + ["Test"
                                                                      ] * 299
             d_rec.append(d)
@@ -62,6 +63,7 @@ def get_cl_df():
 
     d["cat"] = d["cat"].astype(int)
     d["resp"] = d["resp"].astype(int)
+    d["orig_trial_index"] = d["orig_trial_index"].astype(int)
     d["acc"] = d["cat"] == d["resp"]
 
     print(d.groupby(["experiment", "condition"])["subject"].unique())

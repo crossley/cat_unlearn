@@ -6,7 +6,7 @@
 #PBS -l ncpus=8
 #PBS -l storage=gdata/<PROJECT_CODE>+scratch/<PROJECT_CODE>
 #PBS -l wd
-#PBS -J 0-39
+#PBS -J 0-3
 #PBS -N dbm_recovery_chunk
 #PBS -o logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.out
 #PBS -e logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.err
@@ -16,10 +16,11 @@ set -euo pipefail
 # adjust these to your environment
 MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
 VENV_PATH=${VENV_PATH:-}
-NUM_CHUNKS=${NUM_CHUNKS:-40}
-N_REPS=${N_REPS:-2}
+NUM_CHUNKS=4
+N_REPS=${N_REPS:-1}
 BLOCK=${BLOCK:-6}
 SEED=${SEED:-462}
+MAX_GROUPS=${MAX_GROUPS:-8}
 
 mkdir -p logs
 mkdir -p ../dbm_fits/recovery_chunks
@@ -32,10 +33,16 @@ fi
 cd "$PBS_O_WORKDIR"
 cd code
 
+if [ "${PBS_ARRAY_INDEX}" -ge "${NUM_CHUNKS}" ]; then
+  echo "PBS_ARRAY_INDEX=${PBS_ARRAY_INDEX} exceeds NUM_CHUNKS=${NUM_CHUNKS}" >&2
+  exit 1
+fi
+
 python inspect_results_fit_dbm_recovery.py \
   --n-reps "${N_REPS}" \
   --block "${BLOCK}" \
   --chunk-index "${PBS_ARRAY_INDEX}" \
   --num-chunks "${NUM_CHUNKS}" \
   --seed "${SEED}" \
+  --max-groups "${MAX_GROUPS}" \
   --out-dir ../dbm_fits/recovery_chunks

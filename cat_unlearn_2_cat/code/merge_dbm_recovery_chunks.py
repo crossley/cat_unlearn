@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import re
 
 import pandas as pd
 
@@ -11,11 +12,41 @@ if __name__ == "__main__":
     parser.add_argument("--in-dir", type=str, default="../dbm_fits/recovery_chunks")
     parser.add_argument("--glob-pattern", type=str, default="dbm_recovery_empirical_results_block_*.csv")
     parser.add_argument("--out-prefix", type=str, default="../dbm_fits/dbm_recovery_empirical")
+    parser.add_argument("--expected-num-chunks", type=int, default=None)
     args = parser.parse_args()
 
     paths = sorted(glob.glob(os.path.join(args.in_dir, args.glob_pattern)))
     if len(paths) == 0:
         raise FileNotFoundError(f"No chunk files found in {args.in_dir} matching {args.glob_pattern}")
+
+    if args.expected_num_chunks is not None:
+        chunk_pattern = re.compile(r"_chunk_(\d{4})_of_(\d{4})\.csv$")
+        chunk_map = {}
+
+        for path in paths:
+            match = chunk_pattern.search(os.path.basename(path))
+            if match is None:
+                raise ValueError(f"Could not parse chunk id from filename: {path}")
+
+            chunk_idx = int(match.group(1))
+            chunk_total = int(match.group(2))
+            if chunk_total != args.expected_num_chunks:
+                raise ValueError(
+                    f"Chunk file {path} reports total={chunk_total}, "
+                    f"expected {args.expected_num_chunks}"
+                )
+            if chunk_idx in chunk_map:
+                raise ValueError(f"Duplicate chunk index detected: {chunk_idx:04d}")
+            chunk_map[chunk_idx] = path
+
+        missing = sorted(set(range(args.expected_num_chunks)) - set(chunk_map))
+        if missing:
+            missing_preview = ", ".join([f"{idx:04d}" for idx in missing[:10]])
+            suffix = "" if len(missing) <= 10 else ", ..."
+            raise ValueError(
+                f"Missing {len(missing)} recovery chunks out of "
+                f"{args.expected_num_chunks}: {missing_preview}{suffix}"
+            )
 
     rec = pd.concat([pd.read_csv(p) for p in paths], ignore_index=True)
     rec = rec.drop_duplicates().reset_index(drop=True)

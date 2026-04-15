@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("--chunk-index", type=int, default=0)
     parser.add_argument("--num-chunks", type=int, default=1)
     parser.add_argument("--seed", type=int, default=462)
+    parser.add_argument("--max-groups", type=int, default=None)
     parser.add_argument("--out-dir", type=str, default="../dbm_fits/recovery_chunks")
     args = parser.parse_args()
 
@@ -32,11 +33,13 @@ if __name__ == "__main__":
 
     # real trial-level data, same preprocessing pattern as fit_dbm_top
     d = get_cl_df()
-    d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
+    d["block"] = d["orig_trial_index"] // block_size
     d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
     if args.block is not None:
         d = d.loc[d["block"] == args.block]
-    d = d.sort_values(["experiment", "condition", "subject", "block", "trial"]).copy()
+    d = d.sort_values(
+        ["experiment", "condition", "subject", "block", "orig_trial_index"]
+    ).copy()
 
     # fitted model table from real data
     dbm = pd.read_csv("../dbm_fits/dbm_results.csv")
@@ -68,11 +71,16 @@ if __name__ == "__main__":
     sim_in = d.merge(best_fit[keys + ["best_model", "best_params"]], on=keys, how="inner").copy()
 
     groups = list(sim_in.groupby(keys + ["best_model", "best_params"], sort=False))
+    if args.max_groups is not None:
+        if args.max_groups < 1:
+            raise ValueError("max_groups must be >= 1 when provided")
+        groups = groups[:args.max_groups]
     chunk_groups = groups[args.chunk_index::args.num_chunks]
 
     print(
         f"Total groups={len(groups)}, chunk_index={args.chunk_index}, "
-        f"num_chunks={args.num_chunks}, groups_in_chunk={len(chunk_groups)}"
+        f"num_chunks={args.num_chunks}, groups_in_chunk={len(chunk_groups)}, "
+        f"max_groups={args.max_groups}"
     )
 
     # candidate fit set (match dbm_results.csv)
@@ -179,7 +187,8 @@ if __name__ == "__main__":
                 "subject": sub,
             })
 
-            fit = fit_dbm(ds, models, fit_side, k, n_trials, model_names)
+            fit_seed = int(rng.integers(0, 2**31 - 1))
+            fit = fit_dbm(ds, models, fit_side, k, n_trials, model_names, fit_seed)
             fit_bic = fit.groupby("model", as_index=False)["bic"].min()
             recovered_model = fit_bic.loc[fit_bic["bic"].idxmin(), "model"]
 
