@@ -1,0 +1,12 @@
+
+======================================================================================
+                  Resource Usage on 2026-04-15 18:58:31:
+   Job Id:             165751157[3].gadi-pbs
+   Project:            sa4
+   Exit Status:        1
+   Service Units:      0.00
+   NCPUs Requested:    1                   CPU Time Used: 00:00:00        
+   Memory Requested:   4.0GB                 Memory Used: 9.34MB          
+   Walltime Requested: 01:00:00            Walltime Used: 00:00:00        
+   JobFS Requested:    100.0MB                JobFS Used: 0B              
+======================================================================================
