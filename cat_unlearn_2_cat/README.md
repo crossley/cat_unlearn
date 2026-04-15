@@ -111,11 +111,12 @@ cd code
 qsub -v BLOCK=6,N_REPS=1,SEED=462,MAX_GROUPS=8 run_dbm_recovery_gadi.pbs
 ```
 
-3. Wait for all `4` array tasks to finish successfully, then submit the merge:
+3. Wait for all `4` array tasks to finish successfully, then merge locally or
+interactively instead of submitting another PBS job:
 
 ```bash
 cd code
-qsub -v BLOCK=6 merge_dbm_recovery_gadi.pbs
+python3 merge_dbm_recovery_local.py --block 6 --num-chunks 4
 ```
 
 Outputs land in:
@@ -127,14 +128,15 @@ Outputs land in:
 - `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_counts.csv`
 - `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_props.csv`
 
-The merge script now fails if any chunk is missing or if chunk filenames do not
-match the expected `4`-chunk array layout, so do not run the merge until the
-full array has completed cleanly.
+The local merge script fails if any chunk is missing or if chunk filenames do
+not match the expected `4`-chunk array layout, so do not run the merge until
+the full array has completed cleanly.
 
 To scale beyond the demo:
 
-- edit `run_dbm_recovery_gadi.pbs` and `merge_dbm_recovery_gadi.pbs` together
+- edit `run_dbm_recovery_gadi.pbs`
 - increase the fixed `NUM_CHUNKS`
+- pass the matching `--num-chunks` value to `merge_dbm_recovery_local.py`
 - increase or remove `MAX_GROUPS`
 - increase `N_REPS` only after confirming the small run is acceptable
 
