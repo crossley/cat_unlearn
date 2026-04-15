@@ -13,7 +13,7 @@ def _stable_seed(base_seed, *parts):
     return int(digest[:8], 16)
 
 
-def fit_dbm_top(seed=462, optimizer_workers=1, out_path="../dbm_fits/dbm_results.csv"):
+def get_dbm_fit_inputs():
 
     d = get_cl_df()
 
@@ -57,6 +57,13 @@ def fit_dbm_top(seed=462, optimizer_workers=1, out_path="../dbm_fits/dbm_results
         "nll_gcc_eq_2",
         "nll_gcc_eq_3",
     ]
+
+    return d, models, side, k, n, model_names
+
+
+def fit_dbm_top(seed=462, optimizer_workers=1, out_path="../dbm_fits/dbm_results.csv"):
+
+    d, models, side, k, n, model_names = get_dbm_fit_inputs()
 
     dbm = (d.groupby(["experiment", "condition", "subject",
                       "block"]).apply(fit_dbm, models, side, k, n,

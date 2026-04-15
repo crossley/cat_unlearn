@@ -155,26 +155,37 @@ To scale beyond the demo:
 
 ### Refitting DBMs On NCI Gadi
 
-To benchmark or rerun the empirical DBM fits on Gadi, submit the dedicated fit
-job from `code/`:
+To benchmark or rerun the empirical DBM fits on Gadi, submit the chunked array
+fit job from `code/`:
 
 ```bash
 cd code
-qsub -v SEED=462 run_fit_dbm_gadi.pbs
+qsub -v SEED=462 run_fit_dbm_gadi_array.pbs
 ```
 
 Default behavior:
 
-- requests `4` CPUs, `8GB` RAM, and `08:00:00` walltime
-- uses `DE_WORKERS=$PBS_NCPUS` inside `differential_evolution`
-- writes `../dbm_fits/dbm_results_gadi.csv` so the existing local file is not
-  overwritten by default
+- requests `1` CPU, `4GB` RAM, and `08:00:00` walltime per array task
+- runs `4` array tasks, one per chunk of subject/block groups
+- uses `DE_WORKERS=1` by default inside `differential_evolution`
+- writes chunk files into `../dbm_fits/dbm_results_chunks/`
+
+After all `4` array tasks finish, merge the chunk files locally or
+interactively:
+
+```bash
+cd code
+python3 merge_dbm_fit_local.py --num-chunks 4
+```
+
+This writes `../dbm_fits/dbm_results_gadi.csv` by default.
 
 Useful overrides at submission time:
 
 - `DE_WORKERS=<n>` to change optimizer parallelism
-- `OUT_PATH=../dbm_fits/dbm_results.csv` if you do want to overwrite the main
-  fit table
+- edit `run_fit_dbm_gadi_array.pbs` if you want a different fixed `NUM_CHUNKS`
+- pass `--out-path ../dbm_fits/dbm_results.csv` to `merge_dbm_fit_local.py` if
+  you do want to overwrite the main fit table
 - `SEED=<n>` to rerun with a different deterministic base seed
 
 Current module layout:
