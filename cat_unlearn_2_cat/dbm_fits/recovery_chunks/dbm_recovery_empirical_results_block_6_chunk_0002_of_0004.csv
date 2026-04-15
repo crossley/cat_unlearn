@@ -1,0 +1,3 @@
+experiment,condition,subject,block,rep,chunk_index,num_chunks,true_model,recovered_model,true_family,recovered_family,success_strict,success_family
+1,new_learn,6,6,0,2,4,nll_glc_0,nll_glc_0,procedural,procedural,1,1
+1,new_learn,14,6,0,2,4,nll_uniy_0,nll_uniy_0,rule-based,rule-based,1,1
