@@ -1,10 +1,10 @@
 #!/bin/bash
-#PBS -P <PROJECT_CODE>
+#PBS -P sa4
 #PBS -q normal
 #PBS -l walltime=00:20:00
 #PBS -l mem=8GB
 #PBS -l ncpus=1
-#PBS -l storage=gdata/<PROJECT_CODE>+scratch/<PROJECT_CODE>
+#PBS -l storage=gdata/sa4+scratch/sa4
 #PBS -l wd
 #PBS -N dbm_recovery_merge
 #PBS -o logs/dbm_recovery_merge.out
