@@ -1,8 +1,8 @@
 #!/bin/bash
 #PBS -P sa4
 #PBS -q normal
-#PBS -l walltime=00:20:00
-#PBS -l mem=8GB
+#PBS -l walltime=00:10:00
+#PBS -l mem=2GB
 #PBS -l ncpus=1
 #PBS -l storage=gdata/sa4+scratch/sa4
 #PBS -l wd
