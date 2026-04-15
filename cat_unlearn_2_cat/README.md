@@ -153,6 +153,30 @@ To scale beyond the demo:
 - pass `MAX_GROUPS=<n>` at submission time if you want to cap the run again
 - increase `N_REPS` only after confirming the small run is acceptable
 
+### Refitting DBMs On NCI Gadi
+
+To benchmark or rerun the empirical DBM fits on Gadi, submit the dedicated fit
+job from `code/`:
+
+```bash
+cd code
+qsub -v SEED=462 run_fit_dbm_gadi.pbs
+```
+
+Default behavior:
+
+- requests `4` CPUs, `8GB` RAM, and `08:00:00` walltime
+- uses `DE_WORKERS=$PBS_NCPUS` inside `differential_evolution`
+- writes `../dbm_fits/dbm_results_gadi.csv` so the existing local file is not
+  overwritten by default
+
+Useful overrides at submission time:
+
+- `DE_WORKERS=<n>` to change optimizer parallelism
+- `OUT_PATH=../dbm_fits/dbm_results.csv` if you do want to overwrite the main
+  fit table
+- `SEED=<n>` to rerun with a different deterministic base seed
+
 Current module layout:
 
 - `inspect_results.py` - manual entry point for running selected analyses

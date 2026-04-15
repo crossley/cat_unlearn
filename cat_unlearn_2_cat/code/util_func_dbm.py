@@ -13,7 +13,7 @@ def _stable_seed(base_seed, *parts):
     return int(digest[:8], 16)
 
 
-def fit_dbm_top(seed=462):
+def fit_dbm_top(seed=462, optimizer_workers=1, out_path="../dbm_fits/dbm_results.csv"):
 
     d = get_cl_df()
 
@@ -60,12 +60,21 @@ def fit_dbm_top(seed=462):
 
     dbm = (d.groupby(["experiment", "condition", "subject",
                       "block"]).apply(fit_dbm, models, side, k, n,
-                                      model_names, seed).reset_index())
+                                      model_names, seed, optimizer_workers).reset_index())
 
-    dbm.to_csv("../dbm_fits/dbm_results.csv")
+    dbm.to_csv(out_path)
 
 
-def fit_dbm(d, model_func, side, k, n, model_name, base_seed=462):
+def fit_dbm(
+    d,
+    model_func,
+    side,
+    k,
+    n,
+    model_name,
+    base_seed=462,
+    optimizer_workers=1,
+):
     fit_args = {
         "obj_func": None,
         "bounds": None,
@@ -77,7 +86,7 @@ def fit_dbm(d, model_func, side, k, n, model_name, base_seed=462):
         "tol": 1e-3,
         "polish": False,
         "updating": "deferred",
-        "workers": 1,
+        "workers": optimizer_workers,
     }
 
     obj_func = fit_args["obj_func"]

@@ -1,0 +1,35 @@
+#!/bin/bash
+#PBS -P sa4
+#PBS -q normal
+#PBS -l walltime=08:00:00
+#PBS -l mem=8GB
+#PBS -l ncpus=4
+#PBS -l storage=gdata/sa4+scratch/sa4
+#PBS -l wd
+#PBS -r y
+#PBS -N fit_dbm
+#PBS -o logs/fit_dbm.out
+#PBS -e logs/fit_dbm.err
+
+set -euo pipefail
+
+MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
+VENV_PATH=${VENV_PATH:-}
+SEED=${SEED:-462}
+DE_WORKERS=${DE_WORKERS:-${PBS_NCPUS:-1}}
+OUT_PATH=${OUT_PATH:-../dbm_fits/dbm_results_gadi.csv}
+
+mkdir -p logs
+mkdir -p ../dbm_fits
+
+module load "${MODULE_PYTHON}"
+if [ -n "${VENV_PATH}" ]; then
+  source "${VENV_PATH}/bin/activate"
+fi
+
+cd "$PBS_O_WORKDIR"
+
+python3 fit_dbm_gadi.py \
+  --seed "${SEED}" \
+  --optimizer-workers "${DE_WORKERS}" \
+  --out-path "${OUT_PATH}"
