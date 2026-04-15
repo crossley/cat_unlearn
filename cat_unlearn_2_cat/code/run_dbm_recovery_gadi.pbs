@@ -1,11 +1,12 @@
 #!/bin/bash
 #PBS -P sa4
 #PBS -q normal
-#PBS -l walltime=01:00:00
+#PBS -l walltime=02:00:00
 #PBS -l mem=4GB
 #PBS -l ncpus=1
 #PBS -l storage=gdata/sa4+scratch/sa4
 #PBS -l wd
+#PBS -r y
 #PBS -J 0-3
 #PBS -N dbm_recovery_chunk
 #PBS -o logs/dbm_recovery_chunk.out
@@ -20,7 +21,7 @@ NUM_CHUNKS=4
 N_REPS=${N_REPS:-1}
 BLOCK=${BLOCK:-6}
 SEED=${SEED:-462}
-MAX_GROUPS=${MAX_GROUPS:-8}
+MAX_GROUPS=${MAX_GROUPS:-}
 
 mkdir -p logs
 mkdir -p ../dbm_fits/recovery_chunks
@@ -37,11 +38,18 @@ if [ "${PBS_ARRAY_INDEX}" -ge "${NUM_CHUNKS}" ]; then
   exit 1
 fi
 
-python3 inspect_results_fit_dbm_recovery.py \
-  --n-reps "${N_REPS}" \
-  --block "${BLOCK}" \
-  --chunk-index "${PBS_ARRAY_INDEX}" \
-  --num-chunks "${NUM_CHUNKS}" \
-  --seed "${SEED}" \
-  --max-groups "${MAX_GROUPS}" \
+PY_ARGS=(
+  --n-reps "${N_REPS}"
+  --block "${BLOCK}"
+  --chunk-index "${PBS_ARRAY_INDEX}"
+  --num-chunks "${NUM_CHUNKS}"
+  --seed "${SEED}"
   --out-dir ../dbm_fits/recovery_chunks
+)
+
+if [ -n "${MAX_GROUPS}" ]; then
+  PY_ARGS+=(--max-groups "${MAX_GROUPS}")
+fi
+
+python3 inspect_results_fit_dbm_recovery.py \
+  "${PY_ARGS[@]}"

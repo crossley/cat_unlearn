@@ -85,14 +85,15 @@ Run the recovery workflow from `code/` after `../dbm_fits/dbm_results.csv`
 exists. The empirical DBM fits are now deterministic when fit with the same
 base seed, and recovery uses the original trial order to define blocks.
 
-The checked-in Gadi scripts are configured for a conservative demo run:
+The checked-in Gadi scripts are configured for a cautious first real run:
 
 - `4` array tasks total, matching PBS array range `0-3`
 - `1` recovery repetition per group
-- only the first `8` empirical subject/block groups are processed
+- all empirical subject/block groups are processed by default
 
-This keeps the default recovery workload small for a limited allocation. Scale
-up only after the demo run works cleanly.
+This keeps the cluster setup simple while expanding beyond the tiny pilot cap.
+Add `MAX_GROUPS=<n>` at submission time only if you want to reintroduce a hard
+limit for a smaller test.
 
 Before submitting to Gadi, replace `<PROJECT_CODE>` in both PBS scripts with
 your actual NCI project code.
@@ -108,7 +109,7 @@ python -c "from util_func_dbm import fit_dbm_top; fit_dbm_top(seed=462)"
 
 ```bash
 cd code
-qsub -v BLOCK=6,N_REPS=1,SEED=462,MAX_GROUPS=8 run_dbm_recovery_gadi.pbs
+qsub -v BLOCK=6,N_REPS=1,SEED=462 run_dbm_recovery_gadi.pbs
 ```
 
 3. Wait for all `4` array tasks to finish successfully, then merge locally or
@@ -132,12 +133,24 @@ The local merge script fails if any chunk is missing or if chunk filenames do
 not match the expected `4`-chunk array layout, so do not run the merge until
 the full array has completed cleanly.
 
+To plot quick pilot-recovery heatmaps after merging:
+
+```bash
+cd code
+python3 plot_dbm_recovery_pilot.py --block 6
+```
+
+This writes:
+
+- `../figures/dbm_recovery_pilot_block_<BLOCK>_family_props.png`
+- `../figures/dbm_recovery_pilot_block_<BLOCK>_model_props.png`
+
 To scale beyond the demo:
 
 - edit `run_dbm_recovery_gadi.pbs`
 - increase the fixed `NUM_CHUNKS`
 - pass the matching `--num-chunks` value to `merge_dbm_recovery_local.py`
-- increase or remove `MAX_GROUPS`
+- pass `MAX_GROUPS=<n>` at submission time if you want to cap the run again
 - increase `N_REPS` only after confirming the small run is acceptable
 
 Current module layout:
