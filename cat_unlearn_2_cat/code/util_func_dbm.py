@@ -68,7 +68,7 @@ def fit_dbm(d, model_func, side, k, n, model_name):
         "tol": 1e-3,
         "polish": False,
         "updating": "deferred",
-        "workers": -1,
+        "workers": 1,
     }
 
     obj_func = fit_args["obj_func"]

@@ -1,0 +1,32 @@
+#!/bin/bash
+#PBS -P <PROJECT_CODE>
+#PBS -q normal
+#PBS -l walltime=00:20:00
+#PBS -l mem=8GB
+#PBS -l ncpus=1
+#PBS -l storage=gdata/<PROJECT_CODE>+scratch/<PROJECT_CODE>
+#PBS -l wd
+#PBS -N dbm_recovery_merge
+#PBS -o logs/dbm_recovery_merge.out
+#PBS -e logs/dbm_recovery_merge.err
+
+set -euo pipefail
+
+MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
+VENV_PATH=${VENV_PATH:-}
+BLOCK=${BLOCK:-6}
+
+mkdir -p logs
+
+module load "${MODULE_PYTHON}"
+if [ -n "${VENV_PATH}" ]; then
+  source "${VENV_PATH}/bin/activate"
+fi
+
+cd "$PBS_O_WORKDIR"
+cd code
+
+python merge_dbm_recovery_chunks.py \
+  --in-dir ../dbm_fits/recovery_chunks \
+  --glob-pattern "dbm_recovery_empirical_results_block_${BLOCK}_chunk_*.csv" \
+  --out-prefix "../dbm_fits/dbm_recovery_empirical_block_${BLOCK}"

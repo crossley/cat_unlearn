@@ -83,43 +83,39 @@ def get_dbm_df():
         print("DBM results file not found. Please run fit_dbm_top() first.")
         return
 
-    def assign_best_model(x):
-        model = x["model"].to_numpy()
-        bic = x["bic"].to_numpy()
-        best_model = np.unique(model[bic == bic.min()])[0]
-        x["best_model"] = best_model
-        return x
+    keys = ["experiment", "condition", "subject", "block"]
+    bic_by_model = dbm.groupby(keys + ["model"], as_index=False)["bic"].min()
+    idx = bic_by_model.groupby(keys)["bic"].idxmin()
+    ddd = bic_by_model.loc[idx, keys + ["model"]].rename(
+        columns={"model": "best_model"}).copy()
 
-    def get_best_model_frame(dbm):
-        ddd = (dbm.groupby(["experiment", "condition", "subject", "block"
-                            ]).apply(assign_best_model).reset_index(drop=True))
-        ddd = ddd.loc[
-            ddd["model"] == ddd["best_model"],
-            ["experiment", "condition", "subject", "block", "best_model"
-             ]].drop_duplicates()
-        ddd.loc[ddd["best_model"] == "nll_rand_guess",
-                "best_model_class"] = "guessing"
-        ddd.loc[ddd["best_model"] == "nll_bias_guess",
-                "best_model_class"] = "guessing"
-        ddd.loc[ddd["best_model"] == "nll_unix_0",
-                "best_model_class"] = "rule-based"
-        ddd.loc[ddd["best_model"] == "nll_unix_1",
-                "best_model_class"] = "rule-based"
-        ddd.loc[ddd["best_model"] == "nll_uniy_0",
-                "best_model_class"] = "rule-based"
-        ddd.loc[ddd["best_model"] == "nll_uniy_1",
-                "best_model_class"] = "rule-based"
-        ddd.loc[ddd["best_model"] == "nll_glc_0",
-                "best_model_class"] = "procedural"
-        ddd.loc[ddd["best_model"] == "nll_glc_1",
-                "best_model_class"] = "procedural"
-        ddd["best_model_class"] = ddd["best_model_class"].astype("category")
-        ddd["block"] = ddd["block"].astype("category")
-        ddd = ddd.reset_index(drop=True)
-
-        return ddd
-
-    ddd = get_best_model_frame(dbm)
+    ddd.loc[ddd["best_model"] == "nll_rand_guess",
+            "best_model_class"] = "guessing"
+    ddd.loc[ddd["best_model"] == "nll_bias_guess",
+            "best_model_class"] = "guessing"
+    ddd.loc[ddd["best_model"] == "nll_unix_0",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_unix_1",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_uniy_0",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_uniy_1",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_gcc_eq_0",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_gcc_eq_1",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_gcc_eq_2",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_gcc_eq_3",
+            "best_model_class"] = "rule-based"
+    ddd.loc[ddd["best_model"] == "nll_glc_0",
+            "best_model_class"] = "procedural"
+    ddd.loc[ddd["best_model"] == "nll_glc_1",
+            "best_model_class"] = "procedural"
+    ddd["best_model_class"] = ddd["best_model_class"].astype("category")
+    ddd["block"] = ddd["block"].astype("category")
+    ddd = ddd.reset_index(drop=True)
 
     exc_subs_learn = ddd[(ddd["block"] == 2)
                          & (ddd["best_model_class"] == "guessing")][[

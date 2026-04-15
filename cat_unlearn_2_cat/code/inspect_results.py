@@ -15,10 +15,10 @@ if __name__ == "__main__":
     # make_fig_acc_talk()
 
     # Fit DBMs and write ../dbm_fits/dbm_results.csv (can take time; uses differential evolution):
-    fit_dbm_top()
+    # fit_dbm_top()
 
     # Model-class transition heatmaps (requires dbm_results.csv):
-    # make_fig_dbm()
+    make_fig_dbm()
 
     # Bayesian-style comparison plot for selected proportions (uses hard-coded counts at present):
     # make_fig_dbm_bayes()

@@ -309,59 +309,9 @@ def make_fig_acc_talk():
 
 def make_fig_dbm():
 
-    if os.path.exists("../dbm_fits/dbm_results.csv"):
-        dbm = pd.read_csv("../dbm_fits/dbm_results.csv")
-        dbm = dbm[dbm["block"] != "block"].copy()
-        dbm["block"] = dbm["block"].astype(int)
-        dbm["bic"] = dbm["bic"].astype(float)
-        dbm["experiment"] = dbm["experiment"].astype(int)
-    else:
-        print("DBM results file not found. Please run fit_dbm_top() first.")
-
-    def assign_best_model(x):
-        model = x["model"].to_numpy()
-        bic = x["bic"].to_numpy()
-        best_model = np.unique(model[bic == bic.min()])[0]
-        x["best_model"] = best_model
-        return x
-
-    dbm = dbm.groupby(["experiment", "condition", "subject", "block"
-                       ]).apply(assign_best_model).reset_index(drop=True)
-
-    d = get_cl_df()
-
-    dd = dbm.loc[dbm["model"] == dbm["best_model"]]
-    ddd = dd[["experiment", "condition", "subject", "block",
-              "best_model"]].drop_duplicates()
-    ddd.loc[ddd["best_model"] == "nll_rand_guess",
-            "best_model_class"] = "guessing"
-    ddd.loc[ddd["best_model"] == "nll_bias_guess",
-            "best_model_class"] = "guessing"
-    ddd.loc[ddd["best_model"] == "nll_unix_0",
-            "best_model_class"] = "rule-based"
-    ddd.loc[ddd["best_model"] == "nll_unix_1",
-            "best_model_class"] = "rule-based"
-    ddd.loc[ddd["best_model"] == "nll_uniy_0",
-            "best_model_class"] = "rule-based"
-    ddd.loc[ddd["best_model"] == "nll_uniy_1",
-            "best_model_class"] = "rule-based"
-    ddd.loc[ddd["best_model"] == "nll_glc_0",
-            "best_model_class"] = "procedural"
-    ddd.loc[ddd["best_model"] == "nll_glc_1",
-            "best_model_class"] = "procedural"
-    ddd["best_model_class"] = ddd["best_model_class"].astype("category")
-    ddd['block'] = ddd['block'].astype("category")
-    ddd = ddd.reset_index(drop=True)
-
-    # exclude subjects best fit by guessing in the last learning block
-    exc_subs_learn = ddd[(ddd["block"] == 2)
-                         & (ddd["best_model_class"] == "guessing")][[
-                             "experiment", "condition", "subject"
-                         ]].drop_duplicates()
-    ddd = ddd.merge(exc_subs_learn.assign(exclude_subject=True),
-                    on=["experiment", "condition", "subject"],
-                    how="left")
-    ddd = ddd[ddd["exclude_subject"] != True].drop(columns="exclude_subject")
+    ddd = get_dbm_df()
+    if ddd is None:
+        return
 
     print(
         ddd.groupby(["experiment", "condition", "block",
@@ -436,6 +386,84 @@ def make_fig_dbm():
 
     fig.tight_layout()
     plt.savefig("../figures/best_model_class_heatmap.png", dpi=300)
+    plt.close()
+
+    # raw model-type matrix (no class-family grouping)
+    model_abbrev_map = {
+        "nll_glc_0": "LC",
+        "nll_glc_1": "LC",
+        "nll_unix_0": "UX",
+        "nll_unix_1": "UX",
+        "nll_uniy_0": "UY",
+        "nll_uniy_1": "UY",
+        "nll_gcc_eq_0": "CC",
+        "nll_gcc_eq_1": "CC",
+        "nll_gcc_eq_2": "CC",
+        "nll_gcc_eq_3": "CC",
+        "nll_rand_guess": "RG",
+        "nll_bias_guess": "BG",
+    }
+    model_order = ["LC", "UX", "UY", "CC", "RG", "BG"]
+
+    ddd_raw = ddd.copy()
+    ddd_raw["best_model_raw"] = ddd_raw["best_model"].map(model_abbrev_map)
+    ddd_raw = ddd_raw.loc[ddd_raw["best_model_raw"].notna()].copy()
+
+    def block_cross_counts_raw(ddd_raw, experiment, condition, block_x, block_y):
+
+        d_x = ddd_raw[(ddd_raw["experiment"] == experiment)
+                      & (ddd_raw["condition"] == condition)
+                      & (ddd_raw["block"] == block_x)][[
+                          "subject", "best_model_raw"
+                      ]].rename(columns={"best_model_raw": f"b{block_x}"})
+
+        d_y = ddd_raw[(ddd_raw["experiment"] == experiment)
+                      & (ddd_raw["condition"] == condition)
+                      & (ddd_raw["block"] == block_y)][[
+                          "subject", "best_model_raw"
+                      ]].rename(columns={"best_model_raw": f"b{block_y}"})
+
+        both = pd.merge(d_x, d_y, on="subject", how="inner")
+        if both.empty:
+            return pd.DataFrame(0, index=model_order, columns=model_order)
+
+        both[f"b{block_y}"] = pd.Categorical(both[f"b{block_y}"],
+                                             categories=model_order)
+        both[f"b{block_x}"] = pd.Categorical(both[f"b{block_x}"],
+                                             categories=model_order)
+
+        ct = pd.crosstab(both[f"b{block_y}"],
+                         both[f"b{block_x}"]).reindex(index=model_order,
+                                                      columns=model_order,
+                                                      fill_value=0)
+        return ct
+
+    def draw_heatmap_raw(ax, counts, title, xlabel, ylabel):
+        ax.imshow(counts.values,
+                  aspect="equal",
+                  cmap="Greys",
+                  vmin=0,
+                  vmax=max(1, counts.values.max() + 3))
+        ax.set_xticks(range(len(counts.columns)))
+        ax.set_yticks(range(len(counts.index)))
+        ax.set_xticklabels(model_order, rotation=0, fontsize=10)
+        ax.set_yticklabels(model_order, rotation=0, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=12)
+        ax.set_ylabel(ylabel, fontsize=12)
+        ax.set_title(title, fontsize=12)
+
+        for i in range(counts.shape[0]):
+            for j in range(counts.shape[1]):
+                ax.text(j, i, str(counts.iat[i, j]), ha="center", va="center", fontsize=8)
+
+    fig, ax = plt.subplots(2, 2, squeeze=False, figsize=(10, 8))
+
+    for r, c, exp, cond, title, xlab, ylab in panels:
+        counts = block_cross_counts_raw(ddd_raw, exp, cond, block_x=2, block_y=6)
+        draw_heatmap_raw(ax[r, c], counts, title, xlab, ylab)
+
+    fig.tight_layout()
+    plt.savefig("../figures/best_model_raw_heatmap.png", dpi=300)
     plt.close()
 
 

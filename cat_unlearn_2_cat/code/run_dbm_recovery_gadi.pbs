@@ -1,0 +1,41 @@
+#!/bin/bash
+#PBS -P <PROJECT_CODE>
+#PBS -q normal
+#PBS -l walltime=08:00:00
+#PBS -l mem=16GB
+#PBS -l ncpus=8
+#PBS -l storage=gdata/<PROJECT_CODE>+scratch/<PROJECT_CODE>
+#PBS -l wd
+#PBS -J 0-39
+#PBS -N dbm_recovery_chunk
+#PBS -o logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.out
+#PBS -e logs/dbm_recovery_chunk.$PBS_ARRAY_INDEX.err
+
+set -euo pipefail
+
+# adjust these to your environment
+MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
+VENV_PATH=${VENV_PATH:-}
+NUM_CHUNKS=${NUM_CHUNKS:-40}
+N_REPS=${N_REPS:-2}
+BLOCK=${BLOCK:-6}
+SEED=${SEED:-462}
+
+mkdir -p logs
+mkdir -p ../dbm_fits/recovery_chunks
+
+module load "${MODULE_PYTHON}"
+if [ -n "${VENV_PATH}" ]; then
+  source "${VENV_PATH}/bin/activate"
+fi
+
+cd "$PBS_O_WORKDIR"
+cd code
+
+python inspect_results_fit_dbm_recovery.py \
+  --n-reps "${N_REPS}" \
+  --block "${BLOCK}" \
+  --chunk-index "${PBS_ARRAY_INDEX}" \
+  --num-chunks "${NUM_CHUNKS}" \
+  --seed "${SEED}" \
+  --out-dir ../dbm_fits/recovery_chunks

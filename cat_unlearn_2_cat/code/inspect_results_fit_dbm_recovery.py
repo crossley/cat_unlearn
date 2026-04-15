@@ -1,3 +1,6 @@
+import argparse
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -7,18 +10,32 @@ from util_func_dbm import *
 
 if __name__ == "__main__":
 
-    np.random.seed(462)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-reps", type=int, default=2)
+    parser.add_argument("--block", type=int, default=None)
+    parser.add_argument("--chunk-index", type=int, default=0)
+    parser.add_argument("--num-chunks", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=462)
+    parser.add_argument("--out-dir", type=str, default="../dbm_fits/recovery_chunks")
+    args = parser.parse_args()
+
+    if args.num_chunks < 1:
+        raise ValueError("num_chunks must be >= 1")
+    if args.chunk_index < 0 or args.chunk_index >= args.num_chunks:
+        raise ValueError("chunk_index must be in [0, num_chunks)")
 
     # settings
     block_size = 100
     n_trials = block_size
-    n_reps = 2
+    n_reps = args.n_reps
     z_limit = 3
 
     # real trial-level data, same preprocessing pattern as fit_dbm_top
     d = get_cl_df()
     d["block"] = d.groupby(["condition", "subject"]).cumcount() // block_size
     d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
+    if args.block is not None:
+        d = d.loc[d["block"] == args.block]
     d = d.sort_values(["experiment", "condition", "subject", "block", "trial"]).copy()
 
     # fitted model table from real data
@@ -29,6 +46,8 @@ if __name__ == "__main__":
     dbm["p"] = dbm["p"].astype(float)
     dbm["nll"] = dbm["nll"].astype(float)
     dbm["bic"] = dbm["bic"].astype(float)
+    if args.block is not None:
+        dbm = dbm.loc[dbm["block"] == args.block]
 
     # best model per empirical group
     keys = ["experiment", "condition", "subject", "block"]
@@ -47,6 +66,14 @@ if __name__ == "__main__":
 
     # trial-level table aligned to groups we have best fits for
     sim_in = d.merge(best_fit[keys + ["best_model", "best_params"]], on=keys, how="inner").copy()
+
+    groups = list(sim_in.groupby(keys + ["best_model", "best_params"], sort=False))
+    chunk_groups = groups[args.chunk_index::args.num_chunks]
+
+    print(
+        f"Total groups={len(groups)}, chunk_index={args.chunk_index}, "
+        f"num_chunks={args.num_chunks}, groups_in_chunk={len(chunk_groups)}"
+    )
 
     # candidate fit set (match dbm_results.csv)
     models = [
@@ -91,7 +118,10 @@ if __name__ == "__main__":
     rec = []
 
     for rep in range(n_reps):
-        for gk, gg in sim_in.groupby(keys + ["best_model", "best_params"], sort=False):
+        rng = np.random.default_rng(args.seed + (args.chunk_index * 100000) + rep)
+        np.random.seed(int(rng.integers(0, 2**31 - 1)))
+
+        for gk, gg in chunk_groups:
 
             expt, cnd, sub, blk, true_model, true_params = gk
             true_params = np.asarray(true_params, dtype=float)
@@ -164,6 +194,8 @@ if __name__ == "__main__":
                 "subject": sub,
                 "block": blk,
                 "rep": rep,
+                "chunk_index": args.chunk_index,
+                "num_chunks": args.num_chunks,
                 "true_model": true_model,
                 "recovered_model": recovered_model,
                 "true_family": model_family_map[true_key],
@@ -174,13 +206,12 @@ if __name__ == "__main__":
 
     rec = pd.DataFrame(rec)
 
-    cm_family_counts = pd.crosstab(rec["true_family"], rec["recovered_family"])
-    cm_family_props = pd.crosstab(rec["true_family"], rec["recovered_family"], normalize="index")
-    cm_model_counts = pd.crosstab(rec["true_model"], rec["recovered_model"])
-    cm_model_props = pd.crosstab(rec["true_model"], rec["recovered_model"], normalize="index")
-
-    rec.to_csv("../dbm_fits/dbm_recovery_empirical_results.csv", index=False)
-    cm_family_counts.to_csv("../dbm_fits/dbm_recovery_empirical_family_counts.csv")
-    cm_family_props.to_csv("../dbm_fits/dbm_recovery_empirical_family_props.csv")
-    cm_model_counts.to_csv("../dbm_fits/dbm_recovery_empirical_model_counts.csv")
-    cm_model_props.to_csv("../dbm_fits/dbm_recovery_empirical_model_props.csv")
+    os.makedirs(args.out_dir, exist_ok=True)
+    block_tag = "all" if args.block is None else str(args.block)
+    chunk_tag = f"chunk_{args.chunk_index:04d}_of_{args.num_chunks:04d}"
+    out_path = os.path.join(
+        args.out_dir,
+        f"dbm_recovery_empirical_results_block_{block_tag}_{chunk_tag}.csv",
+    )
+    rec.to_csv(out_path, index=False)
+    print(f"Wrote chunk results to: {out_path}")
