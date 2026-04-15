@@ -38,7 +38,7 @@ if [ "${PBS_ARRAY_INDEX}" -ge "${NUM_CHUNKS}" ]; then
   exit 1
 fi
 
-python inspect_results_fit_dbm_recovery.py \
+python3 inspect_results_fit_dbm_recovery.py \
   --n-reps "${N_REPS}" \
   --block "${BLOCK}" \
   --chunk-index "${PBS_ARRAY_INDEX}" \

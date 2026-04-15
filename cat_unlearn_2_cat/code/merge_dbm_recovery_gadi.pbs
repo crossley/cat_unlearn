@@ -27,7 +27,7 @@ fi
 cd "$PBS_O_WORKDIR"
 cd code
 
-python merge_dbm_recovery_chunks.py \
+python3 merge_dbm_recovery_chunks.py \
   --in-dir ../dbm_fits/recovery_chunks \
   --glob-pattern "dbm_recovery_empirical_results_block_${BLOCK}_chunk_*.csv" \
   --out-prefix "../dbm_fits/dbm_recovery_empirical_block_${BLOCK}" \
