@@ -1,0 +1,9 @@
+true_model,nll_bias_guess,nll_gcc_eq_1,nll_gcc_eq_2,nll_gcc_eq_3,nll_glc_0,nll_rand_guess,nll_unix_0,nll_unix_1,nll_uniy_0
+nll_bias_guess,2,0,0,0,0,1,0,0,0
+nll_gcc_eq_2,0,0,4,0,1,0,0,0,0
+nll_gcc_eq_3,0,0,0,1,0,0,0,0,0
+nll_glc_0,0,0,0,0,22,0,0,2,1
+nll_rand_guess,0,0,0,0,0,18,0,0,0
+nll_unix_0,0,1,0,0,0,0,2,0,0
+nll_unix_1,0,0,1,0,1,0,0,7,0
+nll_uniy_0,0,0,0,1,0,0,0,0,9

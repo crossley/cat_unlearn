@@ -54,8 +54,8 @@ if __name__ == "__main__":
     z_limit = 3
 
     # parameter grids
-    glc_slope_grid = np.linspace(-3, 3, 3)
-    glc_intercept_grid = np.linspace(0, 100, 3)
+    glc_slope_grid = np.array([-2.0, -1.0, -0.5, 0.5, 1.0, 2.0])
+    glc_diag_grid = np.linspace(30, 70, 5)
     glc_noise_grid = np.array([2.5, 5.0, 10.0])
 
     gcc_xc_grid = np.linspace(35, 65, 3)
@@ -90,12 +90,14 @@ if __name__ == "__main__":
 
     # generate from GLC
     for slope in glc_slope_grid:
-        for intercept in glc_intercept_grid:
+        for diag in glc_diag_grid:
             for noise in glc_noise_grid:
                 for rep in range(n_reps):
+                    # Treat diag as the point where the boundary crosses y=x.
+                    origin_intercept = diag - (slope * diag)
                     a1 = -slope / np.sqrt(1 + slope ** 2)
                     a2 = np.sqrt(1 - a1 ** 2)
-                    b = -intercept * a2
+                    b = -origin_intercept * a2
 
                     x, y, cat = make_cat_trials(n_per_cat)
                     resp0 = np.zeros(n_trials, dtype=int)
@@ -128,7 +130,7 @@ if __name__ == "__main__":
                         "true_family": "GLC",
                         "true_side": gen_side_glc,
                         "true_slope": slope,
-                        "true_intercept": intercept,
+                        "true_diag": diag,
                         "true_a1": a1,
                         "true_b": b,
                         "true_xc": np.nan,
@@ -179,7 +181,7 @@ if __name__ == "__main__":
                         "true_family": "GCC_eq",
                         "true_side": gen_side_gcc,
                         "true_slope": np.nan,
-                        "true_intercept": np.nan,
+                        "true_diag": np.nan,
                         "true_a1": np.nan,
                         "true_b": np.nan,
                         "true_xc": xc,
@@ -216,7 +218,7 @@ if __name__ == "__main__":
     print("\nGLC success/failure summary:")
     print(
         res.loc[res["true_family"] == "GLC"]
-           .groupby("success_family")[["true_slope", "true_intercept", "true_noise"]]
+           .groupby("success_family")[["true_slope", "true_diag", "true_noise"]]
            .agg(["mean", "std"])
     )
 

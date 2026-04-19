@@ -81,6 +81,7 @@ def fit_dbm(
     model_name,
     base_seed=462,
     optimizer_workers=1,
+    verbose=False,
 ):
     fit_args = {
         "obj_func": None,
@@ -172,14 +173,15 @@ def fit_dbm(
         tmp = np.concatenate((results["x"], [results["fun"]]))
         tmp = np.reshape(tmp, (tmp.shape[0], 1))
 
-        print(model_name[m], results["x"], results["fun"])
-        if "glc" in model_name[m]:
-            # a1*x + a2*y + b = 0  /  y = -(a1*x + b) / a2
-            a1 = results['x'][0]
-            a2 = np.sqrt(1 - a1**2)
-            b = results['x'][1]
-            print(a1, a2, b)
-        print(np.unique(resp))
+        if verbose:
+            print(model_name[m], results["x"], results["fun"])
+            if "glc" in model_name[m]:
+                # a1*x + a2*y + b = 0  /  y = -(a1*x + b) / a2
+                a1 = results['x'][0]
+                a2 = np.sqrt(1 - a1**2)
+                b = results['x'][1]
+                print(a1, a2, b)
+            print(np.unique(resp))
 
         #        fig, ax = plt.subplots(1, 1, squeeze=False)
         #        ax[0, 0].scatter(x, y, c=resp)

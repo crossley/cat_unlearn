@@ -1,0 +1,46 @@
+#!/bin/bash
+#PBS -P sa4
+#PBS -q normal
+#PBS -l walltime=08:00:00
+#PBS -l mem=4GB
+#PBS -l ncpus=1
+#PBS -l storage=gdata/sa4+scratch/sa4
+#PBS -l wd
+#PBS -r y
+#PBS -J 0-31
+#PBS -N glc_gcc_recovery
+#PBS -o logs/glc_gcc_recovery.out
+#PBS -e logs/glc_gcc_recovery.err
+
+set -euo pipefail
+
+MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
+VENV_PATH=${VENV_PATH:-}
+NUM_CHUNKS=32
+N_REPS=${N_REPS:-10}
+SEED=${SEED:-462}
+DE_WORKERS=${DE_WORKERS:-1}
+OUT_DIR=${OUT_DIR:-../dbm_fits/glc_gcc_recovery_chunks}
+
+mkdir -p logs
+mkdir -p "${OUT_DIR}"
+
+module load "${MODULE_PYTHON}"
+if [ -n "${VENV_PATH}" ]; then
+  source "${VENV_PATH}/bin/activate"
+fi
+
+cd "$PBS_O_WORKDIR"
+
+if [ "${PBS_ARRAY_INDEX}" -ge "${NUM_CHUNKS}" ]; then
+  echo "PBS_ARRAY_INDEX=${PBS_ARRAY_INDEX} exceeds NUM_CHUNKS=${NUM_CHUNKS}" >&2
+  exit 1
+fi
+
+python3 fit_glc_gcc_recovery_gadi_array.py \
+  --n-reps "${N_REPS}" \
+  --seed "${SEED}" \
+  --optimizer-workers "${DE_WORKERS}" \
+  --chunk-index "${PBS_ARRAY_INDEX}" \
+  --num-chunks "${NUM_CHUNKS}" \
+  --out-dir "${OUT_DIR}"
