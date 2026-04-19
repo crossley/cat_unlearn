@@ -7,7 +7,7 @@
 #PBS -l storage=gdata/sa4+scratch/sa4
 #PBS -l wd
 #PBS -r y
-#PBS -J 0-31
+#PBS -J 0-7
 #PBS -N glc_gcc_recovery
 #PBS -o logs/glc_gcc_recovery.out
 #PBS -e logs/glc_gcc_recovery.err
@@ -16,7 +16,7 @@ set -euo pipefail
 
 MODULE_PYTHON=${MODULE_PYTHON:-python3/3.11.0}
 VENV_PATH=${VENV_PATH:-}
-NUM_CHUNKS=32
+NUM_CHUNKS=8
 N_REPS=${N_REPS:-10}
 SEED=${SEED:-462}
 DE_WORKERS=${DE_WORKERS:-1}

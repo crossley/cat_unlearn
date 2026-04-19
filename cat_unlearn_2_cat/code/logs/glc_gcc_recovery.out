@@ -1,0 +1,15 @@
+Total jobs=4800, chunk_index=7, num_chunks=8, jobs_in_chunk=600
+Wrote GLC/GCC recovery chunk to: ../dbm_fits/glc_gcc_recovery_chunks/glc_gcc_recovery_chunk_0007_of_0008.csv
+Elapsed seconds: 1583.5
+
+======================================================================================
+                  Resource Usage on 2026-04-19 14:46:03:
+   Job Id:             166447280[7].gadi-pbs
+   Project:            sa4
+   Exit Status:        0
+   Service Units:      0.89
+   NCPUs Requested:    1                   CPU Time Used: 00:26:24        
+   Memory Requested:   4.0GB                 Memory Used: 116.23MB        
+   Walltime Requested: 08:00:00            Walltime Used: 00:26:49        
+   JobFS Requested:    100.0MB                JobFS Used: 0B              
+======================================================================================
