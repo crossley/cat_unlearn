@@ -20,7 +20,7 @@ def get_dbm_fit_inputs():
     block_size = 100
     d["block"] = d["orig_trial_index"] // block_size
 
-    d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
+    d = d.loc[d["block"].isin([0, 2, 6])]
 
     d = d.sort_values(
         ["experiment", "condition", "subject", "block", "orig_trial_index"]

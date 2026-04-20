@@ -83,7 +83,8 @@ Any generated output is controlled by the `__main__` block near the end of `insp
 
 Run the recovery workflow from `code/` after `../dbm_fits/dbm_results.csv`
 exists. The empirical DBM fits are now deterministic when fit with the same
-base seed, and recovery uses the original trial order to define blocks.
+base seed, and recovery uses the original trial order to define blocks. DBM
+fits are run for blocks `0`, `2`, and `6`.
 
 The checked-in Gadi scripts are configured for a cautious first real run:
 
@@ -156,7 +157,7 @@ To scale beyond the demo:
 ### Refitting DBMs On NCI Gadi
 
 To benchmark or rerun the empirical DBM fits on Gadi, submit the chunked array
-fit job from `code/`:
+fit job from `code/`. The current fit input includes blocks `0`, `2`, and `6`:
 
 ```bash
 cd code

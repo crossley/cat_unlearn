@@ -1,0 +1,7 @@
+true_model,nll_gcc_eq_0,nll_gcc_eq_1,nll_gcc_eq_2,nll_gcc_eq_3,nll_glc_0,nll_glc_1
+nll_gcc_eq_0,569,19,14,3,9,136
+nll_gcc_eq_1,21,660,8,17,0,44
+nll_gcc_eq_2,18,9,667,15,41,0
+nll_gcc_eq_3,6,17,7,561,145,14
+nll_glc_0,0,0,2,55,842,1
+nll_glc_1,54,0,0,0,1,845

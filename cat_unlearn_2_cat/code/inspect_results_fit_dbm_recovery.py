@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # real trial-level data, same preprocessing pattern as fit_dbm_top
     d = get_cl_df()
     d["block"] = d["orig_trial_index"] // block_size
-    d = d.loc[(d["block"] == 2) | (d["block"] == 6)]
+    d = d.loc[d["block"].isin([0, 2, 6])]
     if args.block is not None:
         d = d.loc[d["block"] == args.block]
     d = d.sort_values(
