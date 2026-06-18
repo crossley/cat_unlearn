@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-d = pd.read_csv("sub_2_data.csv")
+d = pd.read_csv("sub_3_data.csv")
 d["block"] = d["trial"] // 50
 d["phase"] = d["trial"] // 300
 d["acc"] = d["cat"] == d["resp"]

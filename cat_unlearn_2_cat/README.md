@@ -6,16 +6,26 @@ Code, data, analysis outputs, and manuscript files for the paper:
 
 ## Directory Structure
 
-- **code/**
-  Analysis scripts, utilities, and experiment runtime code.
-  - `inspect_results.py` - thin entry-point script for running analysis functions
-  - `util_func_figs.py` - figure-generation functions
-  - `util_func_dbm.py` - decision-bound model (DBM) fitting and likelihood functions
-  - `util_func_wrangle.py` - data loading and DBM-result wrangling helpers
+- **experiment/**
+  Experiment runtime code.
+  - `run_exp.py` - pygame experiment runtime used to generate subject CSVs
   - `util_func_stimcat.py` - stimulus generation and grating utilities
-  - `make_example_trials_fig.py` - standalone example-trials figure script
-  - `generate_example_trial.py` - standalone raster example-trial image builder
-  - `run_exp.py` - experiment runtime used to generate subject CSVs
+
+- **analysis/**
+  Analysis scripts, DBM fitting code, figure scripts, and Gadi submission files.
+  - `fit_dbm.py` - fits DBMs locally or as one Gadi array chunk
+  - `fit_dbm_gadi_array.pbs` - Gadi wrapper for `fit_dbm.py`
+  - `merge_dbm_fit.py` - merges DBM fit chunks
+  - `fit_dbm_recovery.py` - empirical DBM recovery locally or as one Gadi chunk
+  - `fit_dbm_recovery_gadi_array.pbs` - Gadi wrapper for recovery
+  - `merge_dbm_recovery.py` - merges empirical recovery chunks
+  - `make_figure_accuracy.py` - accuracy figure
+  - `make_figure_dbm_heatmap.py` - DBM transition heatmaps
+  - `make_figure_dbm_recovery.py` - empirical recovery heatmaps
+  - `make_figure_bayes_post.py` - Bayesian posterior comparison figure
+  - `dbm_models.py` - decision-bound model likelihoods and simulation functions
+  - `trial_data.py` - trial-level data loading and cleaning
+  - `dbm_results.py` - best-fit DBM loading, classification, and exclusions
 
 - **data/**
   Trial-level data files, one CSV per subject (for example `sub_1_data.csv`).
@@ -26,7 +36,7 @@ Code, data, analysis outputs, and manuscript files for the paper:
 
 - **figures/**
   Analysis outputs currently present in this subtree.
-  - `subjects_accuracy_all.png`
+  - `subjects_accuracy_include_all_models_learning_nonguessers.png`
   - `best_model_class_heatmap.png`
   - `bayesian_comparison.png`
 
@@ -59,29 +69,23 @@ pip install -r requirements.txt
 
 ## How To Run
 
-Run analysis scripts from the `code/` directory so relative
+Run analysis scripts from the `analysis/` directory so relative
 paths resolve correctly.
 
 ### Main analysis workflow
 
+Figure scripts can be run directly:
+
 ```bash
-cd code
-python inspect_results.py
+cd analysis
+python make_figure_accuracy.py
+python make_figure_dbm_heatmap.py
+python make_figure_bayes_post.py
 ```
-
-`inspect_results.py` is now a thin runner that imports top-level functions from the utility modules and exposes them as commented calls in its `__main__` block.
-
-Any generated output is controlled by the `__main__` block near the end of `inspect_results.py`.
-
-- `make_fig_acc_all()` - writes `subjects_accuracy_all.png`
-- `make_fig_acc_talk()` - writes two talk-style PDF figures
-- `fit_dbm_top()` - writes `dbm_results.csv`
-- `make_fig_dbm()` - writes `best_model_class_heatmap.png`
-- `make_fig_dbm_bayes()` - writes `bayesian_comparison.png`
 
 ### Model Recovery On NCI Gadi
 
-Run the recovery workflow from `code/` after `../dbm_fits/dbm_results.csv`
+Run the recovery workflow from `analysis/` after `../dbm_fits/dbm_results.csv`
 exists. The empirical DBM fits are now deterministic when fit with the same
 base seed, and recovery uses the original trial order to define blocks. DBM
 fits are run for blocks `0`, `2`, and `6`.
@@ -102,33 +106,33 @@ your actual NCI project code.
 1. Generate or refresh empirical DBM fits locally:
 
 ```bash
-cd code
-python -c "from util_func_dbm import fit_dbm_top; fit_dbm_top(seed=462)"
+cd analysis
+python fit_dbm.py --seed 462 --out-path ../dbm_fits/dbm_results.csv
 ```
 
 2. Submit the recovery array job on Gadi:
 
 ```bash
-cd code
-qsub -v BLOCK=6,N_REPS=1,SEED=462 run_dbm_recovery_gadi.pbs
+cd analysis
+qsub -v BLOCK=6,N_REPS=1,SEED=462 fit_dbm_recovery_gadi_array.pbs
 ```
 
 3. Wait for all `4` array tasks to finish successfully, then merge locally or
 interactively instead of submitting another PBS job:
 
 ```bash
-cd code
-python3 merge_dbm_recovery_local.py --block 6 --num-chunks 4
+cd analysis
+python3 merge_dbm_recovery.py --block 6 --num-chunks 4
 ```
 
 Outputs land in:
 
 - `../dbm_fits/recovery_chunks/` - one CSV per chunk
-- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_results.csv`
-- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_family_counts.csv`
-- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_family_props.csv`
-- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_counts.csv`
-- `../dbm_fits/dbm_recovery_empirical_block_<BLOCK>_model_props.csv`
+- `../dbm_fits/fit_dbm_recovery_block_<BLOCK>_results.csv`
+- `../dbm_fits/fit_dbm_recovery_block_<BLOCK>_family_counts.csv`
+- `../dbm_fits/fit_dbm_recovery_block_<BLOCK>_family_props.csv`
+- `../dbm_fits/fit_dbm_recovery_block_<BLOCK>_model_counts.csv`
+- `../dbm_fits/fit_dbm_recovery_block_<BLOCK>_model_props.csv`
 
 The local merge script fails if any chunk is missing or if chunk filenames do
 not match the expected `4`-chunk array layout, so do not run the merge until
@@ -137,8 +141,8 @@ the full array has completed cleanly.
 To plot quick pilot-recovery heatmaps after merging:
 
 ```bash
-cd code
-python3 plot_dbm_recovery_pilot.py --block 6
+cd analysis
+python3 make_figure_dbm_recovery.py --block 6
 ```
 
 This writes:
@@ -148,20 +152,30 @@ This writes:
 
 To scale beyond the demo:
 
-- edit `run_dbm_recovery_gadi.pbs`
+- edit `fit_dbm_recovery_gadi_array.pbs`
 - increase the fixed `NUM_CHUNKS`
-- pass the matching `--num-chunks` value to `merge_dbm_recovery_local.py`
+- pass the matching `--num-chunks` value to `merge_dbm_recovery.py`
 - pass `MAX_GROUPS=<n>` at submission time if you want to cap the run again
 - increase `N_REPS` only after confirming the small run is acceptable
 
 ### Refitting DBMs On NCI Gadi
 
-To benchmark or rerun the empirical DBM fits on Gadi, submit the chunked array
-fit job from `code/`. The current fit input includes blocks `0`, `2`, and `6`:
+The current DBM fit input includes blocks `0`, `2`, and `6`. The same fitting
+script can be run locally or as one chunk of a Gadi array job.
+
+For a full local/interative run:
 
 ```bash
-cd code
-qsub -v SEED=462 run_fit_dbm_gadi_array.pbs
+cd analysis
+python fit_dbm.py --seed 462 --out-path ../dbm_fits/dbm_results.csv
+```
+
+To benchmark or rerun the empirical DBM fits on Gadi, submit the array job from
+`analysis/`:
+
+```bash
+cd analysis
+qsub -v SEED=462 fit_dbm_gadi_array.pbs
 ```
 
 Default behavior:
@@ -170,13 +184,14 @@ Default behavior:
 - runs `4` array tasks, one per chunk of subject/block groups
 - uses `DE_WORKERS=1` by default inside `differential_evolution`
 - writes chunk files into `../dbm_fits/dbm_results_chunks/`
+- each array task calls `fit_dbm.py` with its `--chunk-index`
 
 After all `4` array tasks finish, merge the chunk files locally or
 interactively:
 
 ```bash
-cd code
-python3 merge_dbm_fit_local.py --num-chunks 4
+cd analysis
+python3 merge_dbm_fit.py --num-chunks 4
 ```
 
 This writes `../dbm_fits/dbm_results_gadi.csv` by default.
@@ -184,32 +199,21 @@ This writes `../dbm_fits/dbm_results_gadi.csv` by default.
 Useful overrides at submission time:
 
 - `DE_WORKERS=<n>` to change optimizer parallelism
-- edit `run_fit_dbm_gadi_array.pbs` if you want a different fixed `NUM_CHUNKS`
-- pass `--out-path ../dbm_fits/dbm_results.csv` to `merge_dbm_fit_local.py` if
+- edit `fit_dbm_gadi_array.pbs` if you want a different fixed `NUM_CHUNKS`
+- pass `--out-path ../dbm_fits/dbm_results.csv` to `merge_dbm_fit.py` if
   you do want to overwrite the main fit table
 - `SEED=<n>` to rerun with a different deterministic base seed
 
 Current module layout:
 
-- `inspect_results.py` - manual entry point for running selected analyses
-- `util_func_figs.py` - figure functions
-- `util_func_dbm.py` - model fitting code
-- `util_func_wrangle.py` - data wrangling helpers
-- `util_func_stimcat.py` - stimulus-generation helpers
-
-### Example-trials figure
-
-```bash
-cd code
-python make_example_trials_fig.py
-```
-
-This writes `../figures/example_trials_figure.png`.
+- `dbm_models.py` - model fitting code
+- `trial_data.py` - data loading helpers
+- `dbm_results.py` - DBM result wrangling helpers
 
 ### Running the experiment
 
 ```bash
-cd code
+cd experiment
 python run_exp.py
 ```
 

@@ -1,4 +1,0 @@
-Loading python3/3.11.0
-  Loading requirement: intel-mkl/2022.2.0
-/home/576/mc4906/cat_unlearn/cat_unlearn_2_cat/code/util_func_wrangle.py:31: FutureWarning: Downcasting behavior in `replace` is deprecated and will be removed in a future version. To retain the old behavior, explicitly call `result.infer_objects(copy=False)`. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
-  d["cat"] = d["cat"].replace(cat_map)
